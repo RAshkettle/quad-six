@@ -229,7 +229,7 @@ const animate = () => {
     }
   });
 
-  // Handle portal lifecycle (10-second total duration: 2s opening + 6s normal + 2s despawn)
+  // Handle portal lifecycle (8-second total duration: 2s opening + 4s normal + 2s despawn)
   let hasActivePortals = false;
   portals.forEach((portal) => {
     if (portal.userData.active && !portal.userData.isDespawning) {
@@ -238,15 +238,15 @@ const animate = () => {
       console.log(
         `Portal ${portal.userData.index} LIFECYCLE: ${totalActiveTime.toFixed(
           2
-        )}s / 10.0s (active=${portal.userData.active}, despawning=${
+        )}s / 8.0s (active=${portal.userData.active}, despawning=${
           portal.userData.isDespawning
         })`
       );
 
-      // Start despawn animation after 10 seconds total (2s opening + 6s normal + 2s despawn)
-      if (totalActiveTime >= 10.0) {
+      // Start despawn animation after 8 seconds total (2s opening + 4s normal + 2s despawn)
+      if (totalActiveTime >= 8.0) {
         console.log(
-          `Portal ${portal.userData.index} STARTING DESPAWN after 10 seconds`
+          `Portal ${portal.userData.index} STARTING DESPAWN after 8 seconds`
         );
         portal.userData.isDespawning = true;
         portal.userData.despawnStartTime = currentTime;
