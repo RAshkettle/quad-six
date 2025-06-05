@@ -168,6 +168,12 @@ export class Alien {
 
   reachTarget() {
     console.log(`Alien ${this.id}: reachTarget() called`);
+
+    // Play death sound effect
+    const boomSound = new Audio("/boom.mp3");
+    boomSound.volume = 0.05;
+    boomSound.play();
+
     this.isDying = true;
 
     // Play death animation if available
