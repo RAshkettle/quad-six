@@ -38,15 +38,18 @@ export class AlienManager {
   // Update all aliens
   update(deltaTime) {
     // Update all aliens and remove inactive ones
-    this.aliens = this.aliens.filter((alien) => {
-      if (alien.isActive()) {
-        alien.update(deltaTime);
-        return true;
-      } else {
-        // Alien is no longer active, clean it up
-        alien.destroy();
-        return false;
-      }
+    // this.aliens = this.aliens.filter((alien) => {
+    //   if (alien.isActive()) {
+    //     alien.update(deltaTime);
+    //     return true;
+    //   } else {
+    //     // Alien is no longer active, clean it up
+    //     alien.destroy();
+    //     return false;
+    //   }
+    // });
+    this.aliens.map((alien) => {
+      alien.update(deltaTime);
     });
   }
 

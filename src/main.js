@@ -169,10 +169,15 @@ renderer.render(scene, camera);
 
 // Animation loop for smooth controls
 let animationFrameId = null;
+let lastTime = 0;
 
 const animate = () => {
+  // Calculate deltaTime
+  const currentTime = Date.now() * 0.001;
+  const deltaTime = currentTime - lastTime;
+  lastTime = currentTime;
+
   // Update time uniform for shader animation
-  const currentTime = performance.now() * 0.001;
   planeMaterial.uniforms.time.value = currentTime;
 
   // Update time and animation for visible portals (active or despawning)
@@ -245,10 +250,14 @@ const animate = () => {
   }
 
   // Update station
-  station.update(0.016); // Assuming ~60fps for deltaTime
+  station.update(deltaTime);
 
-  // Update alien manager with deltaTime
-  alienManager.update(0.016); // Assuming ~60fps for deltaTime
+  // Update alien manager with proper deltaTime
+  console.log(
+    `Main: About to call alienManager.update(${deltaTime.toFixed(4)})`
+  );
+  alienManager.update(deltaTime);
+  console.log(`Main: alienManager.update() completed`);
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);
