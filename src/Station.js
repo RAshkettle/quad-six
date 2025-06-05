@@ -19,7 +19,7 @@ export class Station {
         // Portals are at z: -14.5, so station goes at positive z
         // Centered (x: 0) and inset 2 units from edge (z: 12.5)
         // Place on the plane surface (y: 0)
-        this.model.position.set(0, -0.25, 14.5);
+        this.model.position.set(0, 1.5, 14.5);
         this.model.scale.set(0.5, 0.5, 0.5);
 
         // Rotate the station 90 degrees around the Y axis

@@ -2,8 +2,11 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export class Alien {
+  static nextId = 1;
+
   constructor(scene, position) {
     this.scene = scene;
+    this.id = Alien.nextId++;
     this.model = null;
     this.mixer = null;
     this.walkAction = null;
@@ -35,23 +38,29 @@ export class Alien {
         if (gltf.animations && gltf.animations.length > 0) {
           this.mixer = new THREE.AnimationMixer(this.model);
 
-          // Find the walk animation
-          const walkAnimation = gltf.animations.find((animation) =>
-            animation.name.toLowerCase().includes("walk")
+          // Find the walk animation - check for specific name first, then general pattern
+          let walkAnimation = gltf.animations.find(
+            (animation) => animation.name === "AlienArmature|Alien_Walk"
           );
+
+          if (!walkAnimation) {
+            walkAnimation = gltf.animations.find((animation) =>
+              animation.name.toLowerCase().includes("walk")
+            );
+          }
 
           if (walkAnimation) {
             this.walkAction = this.mixer.clipAction(walkAnimation);
-            this.walkAction.setLoop(THREE.LoopRepeat);
-            console.log(`Found walk animation: ${walkAnimation.name}`);
+            this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
+            this.walkAction.clampWhenFinished = false;
+            this.walkAction.setEffectiveWeight(1.0);
           } else {
-            console.warn(
-              "No walk animation found, using first available animation"
-            );
             // Fallback to first animation if no walk animation found
             if (gltf.animations.length > 0) {
               this.walkAction = this.mixer.clipAction(gltf.animations[0]);
-              this.walkAction.setLoop(THREE.LoopRepeat);
+              this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
+              this.walkAction.clampWhenFinished = false;
+              this.walkAction.setEffectiveWeight(1.0);
             }
           }
         }
@@ -61,14 +70,9 @@ export class Alien {
 
         // Start walking toward the station
         this.startWalking();
-
-        console.log("Alien loaded successfully");
       },
       (progress) => {
-        console.log(
-          "Alien loading progress:",
-          (progress.loaded / progress.total) * 100 + "%"
-        );
+        // Loading progress can be handled silently
       },
       (error) => {
         console.error("Error loading alien:", error);
@@ -90,7 +94,10 @@ export class Alien {
 
     // Start walk animation
     if (this.walkAction) {
+      this.walkAction.reset();
       this.walkAction.play();
+      this.walkAction.enabled = true;
+      this.walkAction.paused = false;
     }
   }
 
@@ -117,7 +124,6 @@ export class Alien {
   }
 
   reachTarget() {
-    console.log("Alien reached the station!");
     this.isWalking = false;
 
     // Stop walk animation

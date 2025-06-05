@@ -238,7 +238,7 @@ export class Portals {
         portalMaterialInstance
       );
       const xPosition = -planeWidth / 2 + portalSpacing * (i + 1);
-      portal.position.set(xPosition, 0, farEdgeZ);
+      portal.position.set(xPosition, 2, farEdgeZ); // Moved up by 2 units
       portal.userData = {
         active: false,
         index: i,

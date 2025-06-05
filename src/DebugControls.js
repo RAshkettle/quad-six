@@ -1,11 +1,13 @@
 import { GUI } from "lil-gui";
+import * as THREE from "three";
 
 export class DebugControls {
-  constructor(portalsInstance, audioControls, camera, player) {
+  constructor(portalsInstance, audioControls, camera, player, alienManager) {
     this.portalsInstance = portalsInstance;
     this.audioControls = audioControls;
     this.camera = camera;
     this.player = player;
+    this.alienManager = alienManager;
     this.gui = new GUI();
 
     // Store references to the controllers for updating
@@ -24,11 +26,27 @@ export class DebugControls {
       spawnPortals: () => {
         this.portalsInstance.spawnEnemyPortals(this.audioControls);
       },
+      testSpawnAlien: () => {
+        console.log("=== MANUAL ALIEN SPAWN TEST ===");
+        if (this.alienManager) {
+          // Spawn an alien at a test position (using THREE.Vector3)
+          // Portal height is y=2, so spawn at same height
+          const testPosition = new THREE.Vector3(0, 2, -5);
+          console.log("Spawning test alien at position:", testPosition);
+          this.alienManager.spawnAliensAtPortal(testPosition);
+        } else {
+          console.error("AlienManager not available in debug controls");
+        }
+      },
     };
 
     portalsFolder
       .add(portalControls, "spawnPortals")
       .name("Spawn Enemy Portals");
+
+    portalsFolder
+      .add(portalControls, "testSpawnAlien")
+      .name("Test Spawn Alien");
 
     // Open the portals folder by default
     portalsFolder.open();

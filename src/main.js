@@ -103,7 +103,7 @@ const planeMaterial = new THREE.ShaderMaterial({
 
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
 plane.rotation.x = -Math.PI / 2; // Rotate 90 degrees to make it horizontal
-plane.position.y = -2; // Position it below the cube
+plane.position.y = 0; // Position it below the cube
 scene.add(plane);
 
 // Create portals
@@ -140,7 +140,8 @@ const debugControls = new DebugControls(
   portalsInstance,
   audioControls,
   camera,
-  player
+  player,
+  alienManager
 );
 
 // Canvas

@@ -16,7 +16,7 @@ export class AlienManager {
       // Add some random offset so aliens don't spawn in exactly the same position
       const offset = new THREE.Vector3(
         (Math.random() - 0.5) * 2, // Random X offset -1 to 1
-        0,
+        -2, // Spawn 2 units lower on Y axis (to compensate for portal height)
         (Math.random() - 0.5) * 2 // Random Z offset -1 to 1
       );
 
@@ -24,11 +24,6 @@ export class AlienManager {
       const alien = new Alien(this.scene, spawnPosition);
       this.aliens.push(alien);
     }
-
-    console.log(
-      `Spawned ${alienCount} aliens at portal position:`,
-      portalPosition
-    );
   }
 
   // Spawn aliens at all active portals
