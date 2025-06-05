@@ -5,6 +5,7 @@ import { AudioControls } from "./AudioControls.js"; // Import AudioControls
 import { DebugControls } from "./DebugControls.js"; // Import DebugControls
 import { Lighting } from "./Lighting.js";
 import { Portals } from "./Portals.js"; // Import Portals class
+import { Station } from "./Station.js"; // Import Station class
 import "./style.css";
 
 const titleOverlay = document.getElementById("title-overlay");
@@ -106,6 +107,9 @@ scene.add(plane);
 // Create portals
 const portalsInstance = new Portals(scene);
 const portals = portalsInstance.getPortals();
+
+// Create station
+const station = new Station(scene);
 
 // Sizes
 const sizes = {
@@ -219,6 +223,9 @@ const animate = () => {
   if (!hasActivePortals && audioControls.IsIdleSoundPlaying) {
     audioControls.stopIdleSound();
   }
+
+  // Update station
+  station.update(0.016); // Assuming ~60fps for deltaTime
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);
