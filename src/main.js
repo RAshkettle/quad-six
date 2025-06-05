@@ -104,6 +104,102 @@ plane.rotation.x = -Math.PI / 2; // Rotate 90 degrees to make it horizontal
 plane.position.y = -2; // Position it below the cube
 scene.add(plane);
 
+// Create portal effect with converted Shadertoy shader
+const portalGeometry = new THREE.PlaneGeometry(4, 4);
+const portalMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    time: { value: 0.0 },
+    resolution: { value: new THREE.Vector2(512, 512) },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float time;
+    uniform vec2 resolution;
+    varying vec2 vUv;
+    
+    vec2 hash(vec2 p) {
+      mat2 m = mat2(15.32, 83.43, 117.38, 289.59);
+      return fract(sin(m * p) * 46783.289);
+    }
+    
+    float voronoi(vec2 p) {
+      vec2 g = floor(p);
+      vec2 f = fract(p);
+      
+      float distanceFromPointToCloestFeaturePoint = 1.0;
+      for(int y = -1; y <= 1; ++y) {
+        for(int x = -1; x <= 1; ++x) {
+          vec2 latticePoint = vec2(x, y);
+          float h = distance(latticePoint + hash(g + latticePoint), f);
+          distanceFromPointToCloestFeaturePoint = min(distanceFromPointToCloestFeaturePoint, h);
+        }
+      }
+      
+      return 1.0 - sin(distanceFromPointToCloestFeaturePoint);
+    }
+    
+    float portalTexture(vec2 uv) {
+      float t = voronoi(uv * 8.0 + vec2(time));
+      t *= 1.0 - length(uv * 2.0);
+      return t;
+    }
+    
+    float fbm(vec2 uv) {
+      float sum = 0.0;
+      float amp = 1.0;
+      
+      for(int i = 0; i < 4; ++i) {
+        sum += portalTexture(uv) * amp;
+        uv += uv;
+        amp *= 0.8;
+      }
+      
+      return sum;
+    }
+    
+    void main() {
+      // Convert UV to centered coordinates (-1 to 1)
+      vec2 uv = (vUv * 2.0 - 1.0);
+      
+      // Calculate distance from center for perfect circle
+      float distFromCenter = length(uv);
+      
+      // Create a perfect circular mask with smooth edges
+      float circleMask = 1.0 - smoothstep(0.9, 1.0, distFromCenter);
+      
+      // Only calculate the effect inside the circle to avoid edge artifacts
+      if (circleMask <= 0.0) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        return;
+      }
+      
+      // Use the original UV without aspect ratio correction for the effect
+      float t = pow(fbm(uv * 0.3), 2.0);
+      
+      // Enhance the effect intensity
+      t *= 1.5;
+      
+      // Combine the effect intensity with the circular mask for alpha
+      float alpha = t * circleMask;
+      
+      vec3 color = vec3(t * 2.0, t * 4.0, t * 8.0);
+      gl_FragColor = vec4(color, alpha);
+    }
+  `,
+  transparent: true,
+  side: THREE.DoubleSide,
+});
+
+const portal = new THREE.Mesh(portalGeometry, portalMaterial);
+portal.position.set(0, 2, -5); // Position it as a vertical portal
+scene.add(portal);
+
 // Sizes
 const sizes = {
   width: window.innerWidth,
@@ -199,7 +295,9 @@ renderer.render(scene, camera);
 // Animation loop for smooth controls
 const animate = () => {
   // Update time uniform for shader animation
-  planeMaterial.uniforms.time.value = performance.now() * 0.001;
+  const currentTime = performance.now() * 0.001;
+  planeMaterial.uniforms.time.value = currentTime;
+  portalMaterial.uniforms.time.value = currentTime;
 
   // Update camera movement from keyboard input
   updateCameraMovement();
