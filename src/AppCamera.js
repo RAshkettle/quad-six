@@ -67,9 +67,39 @@ export class AppCamera {
     if (this.keys.d || this.keys.ArrowRight)
       movement.add(right.clone().multiplyScalar(this.moveSpeed));
 
-    // Apply movement to camera and controls target
-    this.instance.position.add(movement);
-    controls.target.add(movement);
+    // Calculate new positions
+    const newCameraPosition = this.instance.position.clone().add(movement);
+    const newTargetPosition = controls.target.clone().add(movement);
+
+    // Clamp positions to stay within the 30x30 plane bounds
+    const planeSize = 15; // Half of the 30x30 plane size
+
+    // Clamp target position
+    newTargetPosition.x = Math.max(
+      -planeSize,
+      Math.min(planeSize, newTargetPosition.x)
+    );
+    newTargetPosition.z = Math.max(
+      -planeSize,
+      Math.min(planeSize, newTargetPosition.z)
+    );
+    newTargetPosition.y = 0; // Keep target on the ground plane
+
+    // Clamp camera position
+    newCameraPosition.x = Math.max(
+      -planeSize,
+      Math.min(planeSize, newCameraPosition.x)
+    );
+    newCameraPosition.z = Math.max(
+      -planeSize,
+      Math.min(planeSize, newCameraPosition.z)
+    );
+    // Prevent camera from going below ground level
+    newCameraPosition.y = Math.max(0.5, newCameraPosition.y);
+
+    // Apply clamped positions
+    this.instance.position.copy(newCameraPosition);
+    controls.target.copy(newTargetPosition);
   }
 
   resize(newWidth, newHeight) {

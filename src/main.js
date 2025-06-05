@@ -164,6 +164,22 @@ controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent going below horizontal (w
 controls.minDistance = 1; // Minimum zoom distance
 controls.maxDistance = 50; // Maximum zoom distance
 
+// Set up target position clamping to keep camera on the plane
+const planeSize = 15; // Half of the 30x30 plane size
+controls.addEventListener("change", () => {
+  // Clamp the target position to stay within the plane bounds
+  controls.target.x = Math.max(
+    -planeSize,
+    Math.min(planeSize, controls.target.x)
+  );
+  controls.target.z = Math.max(
+    -planeSize,
+    Math.min(planeSize, controls.target.z)
+  );
+  // Keep target on the ground plane
+  controls.target.y = 0;
+});
+
 // Initial render
 renderer.render(scene, camera);
 
@@ -292,9 +308,6 @@ const animate = () => {
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);
-
-  // Update debug controls to reflect camera position changes
-  debugControls.updateCameraControllers();
 
   // Update controls
   controls.update();

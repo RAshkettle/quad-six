@@ -1,5 +1,4 @@
 import { GUI } from "lil-gui";
-import * as THREE from "three";
 
 export class DebugControls {
   constructor(portalsInstance, audioControls, camera, player, alienManager) {
@@ -11,7 +10,6 @@ export class DebugControls {
     this.gui = new GUI();
 
     // Store references to the controllers for updating
-    this.cameraControllers = {};
     this.playerControllers = {};
 
     this.setupControls();
@@ -26,59 +24,14 @@ export class DebugControls {
       spawnPortals: () => {
         this.portalsInstance.spawnEnemyPortals(this.audioControls);
       },
-      testSpawnAlien: () => {
-        console.log("=== MANUAL ALIEN SPAWN TEST ===");
-        if (this.alienManager) {
-          // Spawn an alien at a test position (using THREE.Vector3)
-          // Portal height is y=2, so spawn at same height
-          const testPosition = new THREE.Vector3(0, 2, -5);
-          console.log("Spawning test alien at position:", testPosition);
-          this.alienManager.spawnAliensAtPortal(testPosition);
-        } else {
-          console.error("AlienManager not available in debug controls");
-        }
-      },
     };
 
     portalsFolder
       .add(portalControls, "spawnPortals")
       .name("Spawn Enemy Portals");
 
-    portalsFolder
-      .add(portalControls, "testSpawnAlien")
-      .name("Test Spawn Alien");
-
     // Open the portals folder by default
     portalsFolder.open();
-
-    // Create Camera folder
-    const cameraFolder = this.gui.addFolder("Camera Position");
-
-    // Add camera position controls and store references
-    this.cameraControllers.x = cameraFolder
-      .add(this.camera.position, "x", -20, 20, 0.1)
-      .name("X Position");
-
-    this.cameraControllers.y = cameraFolder
-      .add(this.camera.position, "y", -10, 20, 0.1)
-      .name("Y Position");
-
-    this.cameraControllers.z = cameraFolder
-      .add(this.camera.position, "z", -20, 20, 0.1)
-      .name("Z Position");
-
-    // Add reset camera button
-    const cameraControls = {
-      resetPosition: () => {
-        this.camera.position.set(0, 0, 15);
-        this.updateCameraControllers();
-      },
-    };
-
-    cameraFolder.add(cameraControls, "resetPosition").name("Reset Position");
-
-    // Open the camera folder by default
-    cameraFolder.open();
 
     // Create Player folder
     const playerFolder = this.gui.addFolder("Player Stats");
@@ -113,19 +66,6 @@ export class DebugControls {
   // Method to add more controls later if needed
   addFolder(name) {
     return this.gui.addFolder(name);
-  }
-
-  // Method to update camera controllers when position changes externally
-  updateCameraControllers() {
-    if (this.cameraControllers.x) {
-      this.cameraControllers.x.updateDisplay();
-    }
-    if (this.cameraControllers.y) {
-      this.cameraControllers.y.updateDisplay();
-    }
-    if (this.cameraControllers.z) {
-      this.cameraControllers.z.updateDisplay();
-    }
   }
 
   // Method to update player controllers when values change externally
