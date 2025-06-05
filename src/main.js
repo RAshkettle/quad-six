@@ -253,11 +253,7 @@ const animate = () => {
   station.update(deltaTime);
 
   // Update alien manager with proper deltaTime
-  console.log(
-    `Main: About to call alienManager.update(${deltaTime.toFixed(4)})`
-  );
   alienManager.update(deltaTime);
-  console.log(`Main: alienManager.update() completed`);
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);

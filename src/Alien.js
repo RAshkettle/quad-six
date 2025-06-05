@@ -23,16 +23,13 @@ export class Alien {
   }
 
   loadAlien() {
-    console.log(`Alien ${this.id}: Starting to load /slime.glb`); // Add this
     this.loader.load(
       "/slime.glb",
       (gltf) => {
-        console.log(`Alien ${this.id}: Model loaded successfully`, gltf); // Add this
         this.model = gltf.scene;
 
         // Set initial position
         this.model.position.copy(this.position);
-        console.log(`Alien ${this.id}: Positioned at`, this.position); // Add this
 
         // Scale down if needed (adjust as necessary)
         this.model.scale.setScalar(20);
@@ -61,10 +58,6 @@ export class Alien {
 
         // Setup animations
         if (gltf.animations && gltf.animations.length > 0) {
-          console.log(
-            `Alien ${this.id}: Found ${gltf.animations.length} animations:`,
-            gltf.animations.map((a) => a.name)
-          );
           this.mixer = new THREE.AnimationMixer(this.model);
 
           // Find the "moving" animation
@@ -73,10 +66,6 @@ export class Alien {
           );
 
           if (movingAnimation) {
-            console.log(
-              `Alien ${this.id}: Found moving animation:`,
-              movingAnimation.name
-            );
             this.movingAction = this.mixer.clipAction(movingAnimation);
             this.movingAction.setLoop(THREE.LoopRepeat, Infinity);
             this.movingAction.clampWhenFinished = false;
@@ -118,10 +107,7 @@ export class Alien {
         this.startWalking();
       },
       (progress) => {
-        console.log(
-          `Alien ${this.id}: Loading progress:`,
-          Math.round((progress.loaded / progress.total) * 100) + "%"
-        ); // Add this
+        // Add this
       },
       (error) => {
         console.error(`Alien ${this.id}: Error loading alien:`, error); // Modified this
@@ -164,7 +150,6 @@ export class Alien {
   }
 
   update(deltaTime) {
-    console.log("YIPEE!!!!!!!!!!!!!!!!!!");
     // Update animation mixer if it exists
     if (this.mixer) {
       this.mixer.update(deltaTime);
