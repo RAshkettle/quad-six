@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { AppCamera } from "./AppCamera.js"; // Import AppCamera
 import { AudioControls } from "./AudioControls.js"; // Import AudioControls
 import { Lighting } from "./Lighting.js";
 import "./style.css";
+
+const titleOverlay = document.getElementById("title-overlay");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x6a4c93); // Purple sky color
@@ -350,11 +353,9 @@ for (let i = 0; i < portalCount; i++) {
 
 // Function to toggle portal active status (keep 3 active at any time)
 function togglePortalStatus() {
-  console.log("Toggle function called!");
-
   // Get currently active portals
   const activePortals = portals.filter((portal) => portal.userData.active);
-  console.log("Currently active portals:", activePortals.length);
+  "Currently active portals:", activePortals.length;
 
   const currentTime = performance.now() * 0.001;
 
@@ -403,11 +404,6 @@ function togglePortalStatus() {
     // Start idle sound when portals become active (if not already playing)
     audioControls.startIdleSound();
   }
-
-  console.log(
-    "Active portals:",
-    portals.filter((p) => p.userData.active).map((p) => p.userData.index)
-  );
 }
 
 // All portals start inactive - use 't' key to activate 3 random ones
@@ -419,56 +415,14 @@ const sizes = {
 };
 
 // Camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
-camera.position.z = 3;
-scene.add(camera);
+// const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
+// camera.position.z = 3;
+// scene.add(camera);
+const appCamera = new AppCamera(sizes, scene);
+const camera = appCamera.self; // Keep a direct reference for convenience if needed, or use appCamera.self everywhere
 
 // Initialize AudioControls
 const audioControls = new AudioControls(camera);
-
-// Audio system for portal sounds
-// const audioLoader = new THREE.AudioLoader();
-// const listener = new THREE.AudioListener();
-// camera.add(listener);
-
-// Load portal idle sound
-// const portalIdleSound = new THREE.Audio(listener);
-// let isIdleSoundPlaying = false;
-
-// audioLoader.load("public/portalIdle.mp3", function (buffer) {
-// portalIdleSound.setBuffer(buffer);
-// portalIdleSound.setLoop(true);
-// portalIdleSound.setVolume(0.12); // 12% volume
-// });
-
-// Load background music
-// const backgroundMusic = new THREE.Audio(listener);
-
-// audioLoader.load("public/backgroundMusic.mp3", function (buffer) {
-// backgroundMusic.setBuffer(buffer);
-// backgroundMusic.setLoop(true);
-// backgroundMusic.setVolume(0.1); // 10% volume
-// backgroundMusic.play();
-// console.log("Background music started");
-// });
-
-// Function to start idle sound if not already playing
-// function startIdleSound() {
-// if (!isIdleSoundPlaying && portalIdleSound.buffer) {
-// portalIdleSound.play();
-// isIdleSoundPlaying = true;
-// console.log("Portal idle sound started");
-// }
-// }
-
-// Function to stop idle sound
-// function stopIdleSound() {
-// if (isIdleSoundPlaying) {
-// portalIdleSound.stop();
-// isIdleSoundPlaying = false;
-// console.log("Portal idle sound stopped");
-// }
-// }
 
 // Canvas
 const canvas = document.querySelector("#webgl");
@@ -507,15 +461,12 @@ const moveSpeed = 0.1;
 
 // Keyboard event listeners
 window.addEventListener("keydown", (event) => {
-  console.log("Key pressed:", event.key);
-
   if (keys.hasOwnProperty(event.key)) {
     keys[event.key] = true;
   }
 
   // Handle 't' key press for portal toggle (simple approach)
   if (event.key === "t") {
-    console.log("T key detected!");
     togglePortalStatus();
   }
 });
@@ -561,6 +512,7 @@ function updateCameraMovement() {
 renderer.render(scene, camera);
 
 // Animation loop for smooth controls
+let animationFrameId = null;
 const animate = () => {
   // Update time uniform for shader animation
   const currentTime = performance.now() * 0.001;
@@ -605,9 +557,6 @@ const animate = () => {
         portal.material.uniforms.isDespawning.value = 1.0;
         portal.material.uniforms.despawnTime.value = 0.0;
         portal.material.uniforms.isOpening.value = 0.0; // Stop opening animation if still running
-        console.log(
-          `Portal ${portal.userData.index} starting despawn animation`
-        );
       }
     }
 
@@ -623,7 +572,6 @@ const animate = () => {
         portal.visible = false;
         portal.material.uniforms.isDespawning.value = 0.0;
         portal.material.uniforms.despawnTime.value = 0.0;
-        console.log(`Portal ${portal.userData.index} fully despawned`);
       }
     }
   });
@@ -643,10 +591,10 @@ const animate = () => {
   renderer.render(scene, camera);
 
   // Call animate again on the next frame
-  window.requestAnimationFrame(animate);
+  animationFrameId = window.requestAnimationFrame(animate);
 };
 
-animate();
+// animate(); // Don't start animation loop immediately
 
 // Handle window resize
 window.addEventListener("resize", () => {
@@ -655,10 +603,25 @@ window.addEventListener("resize", () => {
   sizes.height = window.innerHeight;
 
   // Update camera
-  camera.aspect = sizes.width / sizes.height;
-  camera.updateProjectionMatrix();
+  // camera.aspect = sizes.width / sizes.height;
+  // camera.updateProjectionMatrix();
+  appCamera.resize(sizes.width, sizes.height);
 
   // Update renderer
   renderer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
+
+// Start scene after user interaction
+titleOverlay.addEventListener(
+  "click",
+  () => {
+    titleOverlay.classList.add("hidden");
+    audioControls.resumeAudioContext(); // Resume audio context on user gesture
+    if (!animationFrameId) {
+      // Start animation loop if not already started
+      animate();
+    }
+  },
+  { once: true }
+); // Ensure this only runs once
