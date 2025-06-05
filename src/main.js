@@ -112,6 +112,8 @@ const portalMaterial = new THREE.ShaderMaterial({
     resolution: { value: new THREE.Vector2(512, 512) },
     openingTime: { value: 0.0 }, // Time since portal started opening
     isOpening: { value: 0.0 }, // 1.0 when opening animation is active
+    despawnTime: { value: 0.0 }, // Time since portal started despawning
+    isDespawning: { value: 0.0 }, // 1.0 when despawn animation is active
   },
   vertexShader: `
     varying vec2 vUv;
@@ -125,6 +127,8 @@ const portalMaterial = new THREE.ShaderMaterial({
     uniform vec2 resolution;
     uniform float openingTime;
     uniform float isOpening;
+    uniform float despawnTime;
+    uniform float isDespawning;
     varying vec2 vUv;
     
     vec2 hash(vec2 p) {
@@ -243,6 +247,72 @@ const portalMaterial = new THREE.ShaderMaterial({
         }
       }
       
+      // Portal despawn animation (reverse of spawn)
+      if (isDespawning > 0.5) {
+        float despawnDuration = 2.0; // 2 second despawn animation
+        float progress = clamp(despawnTime / despawnDuration, 0.0, 1.0);
+        
+        if (progress < 1.0) {
+          // Reverse the spawn animation phases
+          
+          // Phase 1: Portal dissolving (0.0 - 0.25) - reverse of formation phase
+          if (progress < 0.25) {
+            float dissolvePhase = progress / 0.25;
+            
+            // Start with portal and dissolve to explosion
+            float t = pow(fbm(uv * 0.3), 2.0) * (1.0 - dissolvePhase);
+            t *= 1.5;
+            
+            // Mix portal with growing explosion remnants
+            float explosionRemnant = dissolvePhase * 0.5;
+            vec3 explosionColor = vec3(0.1, 0.4, 1.0) * explosionRemnant;
+            vec3 portalColor = vec3(t * 2.0, t * 4.0, t * 8.0);
+            
+            vec3 finalColor = mix(portalColor, explosionColor, dissolvePhase);
+            float alpha = (t + explosionRemnant) * circleMask;
+            
+            gl_FragColor = vec4(finalColor, alpha);
+            return;
+          }
+          
+          // Phase 2: Implosion wave (0.25 - 0.75) - reverse of explosion wave
+          else if (progress < 0.75) {
+            float wavePhase = (progress - 0.25) / 0.5;
+            float waveRadius = (1.0 - wavePhase) * 1.2; // Wave contracts inward
+            
+            // Create implosion wave ring
+            float waveDist = abs(distFromCenter - waveRadius);
+            float waveIntensity = 1.0 - smoothstep(0.0, 0.2, waveDist);
+            waveIntensity *= wavePhase; // Grow as it contracts
+            
+            // Bright implosion color
+            vec3 explosionColor = vec3(0.1, 0.6, 1.0) * waveIntensity * 5.0;
+            
+            float alpha = waveIntensity * circleMask;
+            gl_FragColor = vec4(explosionColor, alpha);
+            return;
+          }
+          
+          // Phase 3: Final center collapse (0.75 - 1.0) - reverse of center explosion
+          else {
+            float centerPhase = (progress - 0.75) / 0.25;
+            float brightness = centerPhase * 10.0; // Growing brightness towards center
+            float radius = (1.0 - centerPhase) * 0.3; // Contracting bright core
+            
+            float centerDist = smoothstep(radius - 0.1, radius, distFromCenter);
+            vec3 centerColor = vec3(0.4, 0.8, 1.0) * brightness; // Bright blue-white
+            
+            float alpha = (1.0 - centerDist) * circleMask * brightness * 0.3;
+            gl_FragColor = vec4(centerColor, alpha);
+            return;
+          }
+        } else {
+          // Animation complete - portal is fully despawned
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+          return;
+        }
+      }
+      
       // Normal portal effect (when not opening or after opening is complete)
       float t = pow(fbm(uv * 0.3), 2.0);
       t *= 1.5;
@@ -276,6 +346,8 @@ for (let i = 0; i < portalCount; i++) {
     index: i,
     openingStartTime: 0, // When the opening animation started
     activationTime: 0, // When the portal became active (for 8-second lifecycle)
+    despawnStartTime: 0, // When the despawn animation started
+    isDespawning: false, // Whether the portal is currently despawning
   };
   portal.visible = false; // Start all portals as invisible
   portals.push(portal);
@@ -296,8 +368,10 @@ function togglePortalStatus() {
     // If 3 are active, deactivate all and pick 3 new random ones
     portals.forEach((portal) => {
       portal.userData.active = false;
+      portal.userData.isDespawning = false;
       portal.visible = false;
       portal.material.uniforms.isOpening.value = 0.0;
+      portal.material.uniforms.isDespawning.value = 0.0;
     });
 
     // Pick 3 random portals to activate
@@ -484,9 +558,9 @@ const animate = () => {
   const currentTime = performance.now() * 0.001;
   planeMaterial.uniforms.time.value = currentTime;
 
-  // Update time and opening animation for visible/active portals
+  // Update time and animation for visible portals (active or despawning)
   portals.forEach((portal) => {
-    if (portal.visible && portal.userData.active) {
+    if (portal.visible) {
       portal.material.uniforms.time.value = currentTime;
 
       // Handle opening animation
@@ -500,24 +574,48 @@ const animate = () => {
           portal.material.uniforms.openingTime.value = 0.0;
         }
       }
+
+      // Handle despawn animation
+      if (portal.material.uniforms.isDespawning.value > 0.5) {
+        const despawnTime = currentTime - portal.userData.despawnStartTime;
+        portal.material.uniforms.despawnTime.value = despawnTime;
+      }
     }
   });
 
   // Handle portal lifecycle (8-second duration)
   let hasActivePortals = false;
   portals.forEach((portal) => {
-    if (portal.userData.active) {
+    if (portal.userData.active && !portal.userData.isDespawning) {
       hasActivePortals = true;
       const activeTime = currentTime - portal.userData.activationTime;
 
-      // Deactivate portal after 8 seconds
+      // Start despawn animation after 8 seconds
       if (activeTime >= 8.0) {
-        portal.userData.active = false;
-        portal.visible = false;
-        portal.material.uniforms.isOpening.value = 0.0;
+        portal.userData.isDespawning = true;
+        portal.userData.despawnStartTime = currentTime;
+        portal.material.uniforms.isDespawning.value = 1.0;
+        portal.material.uniforms.despawnTime.value = 0.0;
+        portal.material.uniforms.isOpening.value = 0.0; // Stop opening animation if still running
         console.log(
-          `Portal ${portal.userData.index} deactivated after 8 seconds`
+          `Portal ${portal.userData.index} starting despawn animation`
         );
+      }
+    }
+
+    // Handle despawn animation
+    if (portal.userData.isDespawning) {
+      const despawnTime = currentTime - portal.userData.despawnStartTime;
+      portal.material.uniforms.despawnTime.value = despawnTime;
+
+      // Complete despawn after 2 seconds
+      if (despawnTime >= 2.0) {
+        portal.userData.active = false;
+        portal.userData.isDespawning = false;
+        portal.visible = false;
+        portal.material.uniforms.isDespawning.value = 0.0;
+        portal.material.uniforms.despawnTime.value = 0.0;
+        console.log(`Portal ${portal.userData.index} fully despawned`);
       }
     }
   });
