@@ -268,6 +268,7 @@ export class Portals {
       portals.forEach((portal) => {
         portal.userData.active = false;
         portal.userData.isDespawning = false;
+        portal.userData.aliensSpawned = false; // Reset aliens spawned flag
         portal.visible = false;
         portal.material.uniforms.isOpening.value = 0.0;
         portal.material.uniforms.isDespawning.value = 0.0;

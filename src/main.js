@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { AlienManager } from "./AlienManager.js"; // Import AlienManager class
 import { AppCamera } from "./AppCamera.js"; // Import AppCamera
 import { AudioControls } from "./AudioControls.js"; // Import AudioControls
 import { DebugControls } from "./DebugControls.js"; // Import DebugControls
@@ -115,6 +116,9 @@ const station = new Station(scene);
 // Create player
 const player = new Player();
 
+// Create alien manager
+const alienManager = new AlienManager(scene);
+
 // Sizes
 const sizes = {
   width: window.innerWidth,
@@ -184,6 +188,12 @@ const animate = () => {
         if (openingTime >= 2.0) {
           portal.material.uniforms.isOpening.value = 0.0;
           portal.material.uniforms.openingTime.value = 0.0;
+
+          // Spawn aliens when portal opening is complete (only once per portal activation)
+          if (!portal.userData.aliensSpawned) {
+            alienManager.spawnAliensAtPortal(portal.position.clone());
+            portal.userData.aliensSpawned = true;
+          }
         }
       }
 
@@ -235,6 +245,9 @@ const animate = () => {
 
   // Update station
   station.update(0.016); // Assuming ~60fps for deltaTime
+
+  // Update alien manager with deltaTime
+  alienManager.update(0.016); // Assuming ~60fps for deltaTime
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);
