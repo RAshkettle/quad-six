@@ -6,7 +6,7 @@ export class DebugControls {
     this.audioControls = audioControls;
     this.camera = camera;
     this.gui = new GUI();
-    
+
     // Store references to the controllers for updating
     this.cameraControllers = {};
 
@@ -38,11 +38,11 @@ export class DebugControls {
     this.cameraControllers.x = cameraFolder
       .add(this.camera.position, "x", -20, 20, 0.1)
       .name("X Position");
-    
+
     this.cameraControllers.y = cameraFolder
       .add(this.camera.position, "y", -10, 20, 0.1)
       .name("Y Position");
-    
+
     this.cameraControllers.z = cameraFolder
       .add(this.camera.position, "z", -20, 20, 0.1)
       .name("Z Position");
@@ -55,9 +55,7 @@ export class DebugControls {
       },
     };
 
-    cameraFolder
-      .add(cameraControls, "resetPosition")
-      .name("Reset Position");
+    cameraFolder.add(cameraControls, "resetPosition").name("Reset Position");
 
     // Open the camera folder by default
     cameraFolder.open();
