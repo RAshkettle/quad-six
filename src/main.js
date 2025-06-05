@@ -196,9 +196,66 @@ const portalMaterial = new THREE.ShaderMaterial({
   side: THREE.DoubleSide,
 });
 
-const portal = new THREE.Mesh(portalGeometry, portalMaterial);
-portal.position.set(0, 2, -5); // Position it as a vertical portal
-scene.add(portal);
+// Create 6 portals evenly spaced along the far edge of the plane
+const portals = [];
+const planeWidth = 30;
+const portalCount = 6;
+const portalSpacing = planeWidth / (portalCount + 1); // Space them evenly with gaps at edges
+const farEdgeZ = -14.5; // Half unit in from the far edge (-15)
+
+for (let i = 0; i < portalCount; i++) {
+  const portal = new THREE.Mesh(portalGeometry, portalMaterial);
+  // Position from left to right: -12 to +12 (evenly spaced)
+  const xPosition = -planeWidth / 2 + portalSpacing * (i + 1);
+  portal.position.set(xPosition, 0, farEdgeZ); // Y = 0 to sit on ground plane at Y = -2
+  portal.userData = { active: false, index: i }; // Track active status and index
+  portal.visible = false; // Start all portals as invisible
+  portals.push(portal);
+  scene.add(portal);
+}
+
+// Function to toggle portal active status (keep 3 active at any time)
+function togglePortalStatus() {
+  console.log("Toggle function called!");
+
+  // Get currently active portals
+  const activePortals = portals.filter((portal) => portal.userData.active);
+  console.log("Currently active portals:", activePortals.length);
+
+  if (activePortals.length === 3) {
+    // If 3 are active, deactivate all and pick 3 new random ones
+    portals.forEach((portal) => {
+      portal.userData.active = false;
+      portal.visible = false;
+    });
+
+    // Pick 3 random portals to activate
+    const shuffled = [...portals].sort(() => 0.5 - Math.random());
+    for (let i = 0; i < 3; i++) {
+      shuffled[i].userData.active = true;
+      shuffled[i].visible = true;
+    }
+  } else {
+    // If less than 3 are active, activate random ones until we have 3
+    const inactivePortals = portals.filter((portal) => !portal.userData.active);
+    const needed = 3 - activePortals.length;
+
+    const shuffledInactive = [...inactivePortals].sort(
+      () => 0.5 - Math.random()
+    );
+    for (let i = 0; i < Math.min(needed, shuffledInactive.length); i++) {
+      shuffledInactive[i].userData.active = true;
+      shuffledInactive[i].visible = true;
+    }
+  }
+
+  console.log(
+    "Active portals:",
+    portals.filter((p) => p.userData.active).map((p) => p.userData.index)
+  );
+}
+
+// All portals start inactive - use 't' key to activate 3 random ones
 
 // Sizes
 const sizes = {
@@ -241,14 +298,23 @@ const keys = {
   ArrowLeft: false,
   ArrowDown: false,
   ArrowRight: false,
+  t: false,
 };
 
 const moveSpeed = 0.1;
 
 // Keyboard event listeners
 window.addEventListener("keydown", (event) => {
+  console.log("Key pressed:", event.key);
+
   if (keys.hasOwnProperty(event.key)) {
     keys[event.key] = true;
+  }
+
+  // Handle 't' key press for portal toggle (simple approach)
+  if (event.key === "t") {
+    console.log("T key detected!");
+    togglePortalStatus();
   }
 });
 
@@ -297,7 +363,13 @@ const animate = () => {
   // Update time uniform for shader animation
   const currentTime = performance.now() * 0.001;
   planeMaterial.uniforms.time.value = currentTime;
-  portalMaterial.uniforms.time.value = currentTime;
+
+  // Update time for only visible/active portals
+  portals.forEach((portal) => {
+    if (portal.visible && portal.userData.active) {
+      portal.material.uniforms.time.value = currentTime;
+    }
+  });
 
   // Update camera movement from keyboard input
   updateCameraMovement();
