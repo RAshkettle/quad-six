@@ -1,20 +1,13 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { Lighting } from "./Lighting.js";
 import "./style.css";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x6a4c93); // Purple sky color
 
-// Environmental lighting for dusk
-// Lighter blue ambient light to simulate dusk sky
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Bright white ambient light
-scene.add(ambientLight);
-
-// Directional light to simulate sky glow from the horizon
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3); // Bright white directional light
-directionalLight.position.set(-10, 5, 10); // Coming from the horizon
-directionalLight.castShadow = false; // Keep it subtle
-scene.add(directionalLight);
+// Setup lighting
+const lighting = new Lighting(scene);
 
 // Create a ground plane with hexagonal shader
 const planeGeometry = new THREE.PlaneGeometry(30, 30);
