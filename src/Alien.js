@@ -4,13 +4,15 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 export class Alien {
   static nextId = 1;
 
-  constructor(scene, position) {
+  constructor(scene, position, player) {
     this.scene = scene;
     this.id = Alien.nextId++;
     this.model = null;
     this.mixer = null;
     this.movingAction = null;
+    this.deathAction = null;
     this.loader = new GLTFLoader();
+    this.player = player;
 
     // Movement properties
     this.position = position.clone();
@@ -65,6 +67,11 @@ export class Alien {
             (animation) => animation.name.toLowerCase() === "moving"
           );
 
+          // Find the "death" animation
+          const deathAnimation = gltf.animations.find(
+            (animation) => animation.name.toLowerCase() === "death"
+          );
+
           if (movingAnimation) {
             this.movingAction = this.mixer.clipAction(movingAnimation);
             this.movingAction.setLoop(THREE.LoopRepeat, Infinity);
@@ -94,6 +101,13 @@ export class Alien {
                 gltf.animations[0].name
               );
             }
+          }
+
+          if (deathAnimation) {
+            this.deathAction = this.mixer.clipAction(deathAnimation);
+            this.deathAction.setLoop(THREE.LoopOnce);
+            this.deathAction.clampWhenFinished = true;
+            this.deathAction.enabled = false;
           }
         } else {
           console.log(`Alien ${this.id}: No animations found in model`);
@@ -150,9 +164,29 @@ export class Alien {
   reachTarget() {
     this.isDying = true;
 
-    // Here you can add logic for when alien reaches the station
-    // For now, we'll just remove the alien
-    this.destroy();
+    // Play death animation if available
+    if (this.deathAction) {
+      // Stop moving animation
+      if (this.movingAction) {
+        this.movingAction.fadeOut(0.2);
+      }
+
+      // Start death animation
+      this.deathAction.reset();
+      this.deathAction.enabled = true;
+      this.deathAction.fadeIn(0.2);
+      this.deathAction.play();
+    }
+
+    // Apply 2 damage to player
+    if (this.player) {
+      this.player.takeDamage(2);
+    }
+
+    // Destroy after 1 second (time for death animation)
+    setTimeout(() => {
+      this.destroy();
+    }, 1000);
   }
 
   destroy() {

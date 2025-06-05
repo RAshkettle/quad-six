@@ -21,7 +21,7 @@ export class AlienManager {
       );
 
       const spawnPosition = portalPosition.clone().add(offset);
-      const alien = new Alien(this.scene, spawnPosition);
+      const alien = new Alien(this.scene, spawnPosition, this.player);
       this.aliens.push(alien);
     }
   }
