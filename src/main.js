@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { AudioControls } from "./AudioControls.js"; // Import AudioControls
 import { Lighting } from "./Lighting.js";
 import "./style.css";
 
@@ -380,7 +381,7 @@ function togglePortalStatus() {
     }
 
     // Start idle sound when portals become active
-    startIdleSound();
+    audioControls.startIdleSound();
   } else {
     // If less than 3 are active, activate random ones until we have 3
     const inactivePortals = portals.filter((portal) => !portal.userData.active);
@@ -400,7 +401,7 @@ function togglePortalStatus() {
     }
 
     // Start idle sound when portals become active (if not already playing)
-    startIdleSound();
+    audioControls.startIdleSound();
   }
 
   console.log(
@@ -422,49 +423,52 @@ const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
 camera.position.z = 3;
 scene.add(camera);
 
+// Initialize AudioControls
+const audioControls = new AudioControls(camera);
+
 // Audio system for portal sounds
-const audioLoader = new THREE.AudioLoader();
-const listener = new THREE.AudioListener();
-camera.add(listener);
+// const audioLoader = new THREE.AudioLoader();
+// const listener = new THREE.AudioListener();
+// camera.add(listener);
 
 // Load portal idle sound
-const portalIdleSound = new THREE.Audio(listener);
-let isIdleSoundPlaying = false;
+// const portalIdleSound = new THREE.Audio(listener);
+// let isIdleSoundPlaying = false;
 
-audioLoader.load("public/portalIdle.mp3", function (buffer) {
-  portalIdleSound.setBuffer(buffer);
-  portalIdleSound.setLoop(true);
-  portalIdleSound.setVolume(0.12); // 12% volume
-});
+// audioLoader.load("public/portalIdle.mp3", function (buffer) {
+// portalIdleSound.setBuffer(buffer);
+// portalIdleSound.setLoop(true);
+// portalIdleSound.setVolume(0.12); // 12% volume
+// });
 
 // Load background music
-const backgroundMusic = new THREE.Audio(listener);
+// const backgroundMusic = new THREE.Audio(listener);
 
-audioLoader.load("public/backgroundMusic.mp3", function (buffer) {
-  backgroundMusic.setBuffer(buffer);
-  backgroundMusic.setLoop(true);
-  backgroundMusic.setVolume(0.1); // 10% volume
-  backgroundMusic.play();
-  console.log("Background music started");
-});
+// audioLoader.load("public/backgroundMusic.mp3", function (buffer) {
+// backgroundMusic.setBuffer(buffer);
+// backgroundMusic.setLoop(true);
+// backgroundMusic.setVolume(0.1); // 10% volume
+// backgroundMusic.play();
+// console.log("Background music started");
+// });
 
 // Function to start idle sound if not already playing
-function startIdleSound() {
-  if (!isIdleSoundPlaying && portalIdleSound.buffer) {
-    portalIdleSound.play();
-    isIdleSoundPlaying = true;
-    console.log("Portal idle sound started");
-  }
-}
+// function startIdleSound() {
+// if (!isIdleSoundPlaying && portalIdleSound.buffer) {
+// portalIdleSound.play();
+// isIdleSoundPlaying = true;
+// console.log("Portal idle sound started");
+// }
+// }
 
 // Function to stop idle sound
-function stopIdleSound() {
-  if (isIdleSoundPlaying) {
-    portalIdleSound.stop();
-    isIdleSoundPlaying = false;
-    console.log("Portal idle sound stopped");
-  }
-}
+// function stopIdleSound() {
+// if (isIdleSoundPlaying) {
+// portalIdleSound.stop();
+// isIdleSoundPlaying = false;
+// console.log("Portal idle sound stopped");
+// }
+// }
 
 // Canvas
 const canvas = document.querySelector("#webgl");
@@ -625,8 +629,8 @@ const animate = () => {
   });
 
   // Stop idle sound if no portals are active
-  if (!hasActivePortals && isIdleSoundPlaying) {
-    stopIdleSound();
+  if (!hasActivePortals && audioControls.IsIdleSoundPlaying) {
+    audioControls.stopIdleSound();
   }
 
   // Update camera movement from keyboard input
