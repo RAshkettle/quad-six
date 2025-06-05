@@ -256,4 +256,59 @@ export class Portals {
   getPortals() {
     return this.portals;
   }
+
+  // Spawns 3 random enemy portals (renamed from togglePortalStatus)
+  spawnEnemyPortals(audioControls) {
+    const portals = this.portals;
+    const activePortals = portals.filter((portal) => portal.userData.active);
+    const currentTime = performance.now() * 0.001;
+
+    if (activePortals.length === 3) {
+      // If 3 are active, deactivate all and pick 3 new random ones
+      portals.forEach((portal) => {
+        portal.userData.active = false;
+        portal.userData.isDespawning = false;
+        portal.visible = false;
+        portal.material.uniforms.isOpening.value = 0.0;
+        portal.material.uniforms.isDespawning.value = 0.0;
+      });
+
+      // Pick 3 random portals to activate
+      const shuffled = [...portals].sort(() => 0.5 - Math.random());
+      for (let i = 0; i < 3; i++) {
+        shuffled[i].userData.active = true;
+        shuffled[i].visible = true;
+        // Start opening animation
+        shuffled[i].userData.openingStartTime = currentTime;
+        shuffled[i].userData.activationTime = currentTime;
+        shuffled[i].material.uniforms.isOpening.value = 1.0;
+        shuffled[i].material.uniforms.openingTime.value = 0.0;
+      }
+
+      // Start idle sound when portals become active
+      if (audioControls) audioControls.startIdleSound();
+    } else {
+      // If less than 3 are active, activate random ones until we have 3
+      const inactivePortals = portals.filter(
+        (portal) => !portal.userData.active
+      );
+      const needed = 3 - activePortals.length;
+
+      const shuffledInactive = [...inactivePortals].sort(
+        () => 0.5 - Math.random()
+      );
+      for (let i = 0; i < Math.min(needed, shuffledInactive.length); i++) {
+        shuffledInactive[i].userData.active = true;
+        shuffledInactive[i].visible = true;
+        // Start opening animation
+        shuffledInactive[i].userData.openingStartTime = currentTime;
+        shuffledInactive[i].userData.activationTime = currentTime;
+        shuffledInactive[i].material.uniforms.isOpening.value = 1.0;
+        shuffledInactive[i].material.uniforms.openingTime.value = 0.0;
+      }
+
+      // Start idle sound when portals become active (if not already playing)
+      if (audioControls) audioControls.startIdleSound();
+    }
+  }
 }

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { AppCamera } from "./AppCamera.js"; // Import AppCamera
 import { AudioControls } from "./AudioControls.js"; // Import AudioControls
+import { DebugControls } from "./DebugControls.js"; // Import DebugControls
 import { Lighting } from "./Lighting.js";
 import { Portals } from "./Portals.js"; // Import Portals class
 import "./style.css";
@@ -122,6 +123,9 @@ const camera = appCamera.self; // Keep a direct reference for convenience if nee
 // Initialize AudioControls
 const audioControls = new AudioControls(camera);
 
+// Initialize Debug Controls
+const debugControls = new DebugControls(portalsInstance, audioControls);
+
 // Canvas
 const canvas = document.querySelector("#webgl");
 
@@ -142,129 +146,12 @@ controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent going below horizontal (w
 controls.minDistance = 1; // Minimum zoom distance
 controls.maxDistance = 50; // Maximum zoom distance
 
-// Keyboard controls for camera movement
-const keys = {
-  w: false,
-  a: false,
-  s: false,
-  d: false,
-  ArrowUp: false,
-  ArrowLeft: false,
-  ArrowDown: false,
-  ArrowRight: false,
-  t: false,
-};
-
-const moveSpeed = 0.1;
-
-// Keyboard event listeners
-window.addEventListener("keydown", (event) => {
-  if (keys.hasOwnProperty(event.key)) {
-    keys[event.key] = true;
-  }
-
-  // Handle 't' key press for portal toggle (simple approach)
-  if (event.key === "t") {
-    togglePortalStatus();
-  }
-});
-
-window.addEventListener("keyup", (event) => {
-  if (keys.hasOwnProperty(event.key)) {
-    keys[event.key] = false;
-  }
-});
-
-// Function to update camera position based on keyboard input
-function updateCameraMovement() {
-  const forward = new THREE.Vector3();
-  const right = new THREE.Vector3();
-  const up = new THREE.Vector3(0, 1, 0);
-
-  // Get camera direction vectors
-  camera.getWorldDirection(forward);
-  right.crossVectors(forward, up).normalize();
-
-  // Flatten forward vector to prevent flying
-  forward.y = 0;
-  forward.normalize();
-
-  // Calculate movement
-  const movement = new THREE.Vector3();
-
-  // WASD movement
-  if (keys.w || keys.ArrowUp)
-    movement.add(forward.clone().multiplyScalar(moveSpeed));
-  if (keys.s || keys.ArrowDown)
-    movement.add(forward.clone().multiplyScalar(-moveSpeed));
-  if (keys.a || keys.ArrowLeft)
-    movement.add(right.clone().multiplyScalar(-moveSpeed));
-  if (keys.d || keys.ArrowRight)
-    movement.add(right.clone().multiplyScalar(moveSpeed));
-
-  // Apply movement to camera and controls target
-  camera.position.add(movement);
-  controls.target.add(movement);
-}
-
-// Function to toggle portal active status (keep 3 active at any time)
-function togglePortalStatus() {
-  // Get currently active portals
-  const activePortals = portals.filter((portal) => portal.userData.active);
-  const currentTime = performance.now() * 0.001;
-
-  if (activePortals.length === 3) {
-    // If 3 are active, deactivate all and pick 3 new random ones
-    portals.forEach((portal) => {
-      portal.userData.active = false;
-      portal.userData.isDespawning = false;
-      portal.visible = false;
-      portal.material.uniforms.isOpening.value = 0.0;
-      portal.material.uniforms.isDespawning.value = 0.0;
-    });
-
-    // Pick 3 random portals to activate
-    const shuffled = [...portals].sort(() => 0.5 - Math.random());
-    for (let i = 0; i < 3; i++) {
-      shuffled[i].userData.active = true;
-      shuffled[i].visible = true;
-      // Start opening animation
-      shuffled[i].userData.openingStartTime = currentTime;
-      shuffled[i].userData.activationTime = currentTime;
-      shuffled[i].material.uniforms.isOpening.value = 1.0;
-      shuffled[i].material.uniforms.openingTime.value = 0.0;
-    }
-
-    // Start idle sound when portals become active
-    audioControls.startIdleSound();
-  } else {
-    // If less than 3 are active, activate random ones until we have 3
-    const inactivePortals = portals.filter((portal) => !portal.userData.active);
-    const needed = 3 - activePortals.length;
-
-    const shuffledInactive = [...inactivePortals].sort(
-      () => 0.5 - Math.random()
-    );
-    for (let i = 0; i < Math.min(needed, shuffledInactive.length); i++) {
-      shuffledInactive[i].userData.active = true;
-      shuffledInactive[i].visible = true;
-      // Start opening animation
-      shuffledInactive[i].userData.openingStartTime = currentTime;
-      shuffledInactive[i].userData.activationTime = currentTime;
-      shuffledInactive[i].material.uniforms.isOpening.value = 1.0;
-      shuffledInactive[i].material.uniforms.openingTime.value = 0.0;
-    }
-
-    // Start idle sound when portals become active (if not already playing)
-    audioControls.startIdleSound();
-  }
-}
-
 // Initial render
 renderer.render(scene, camera);
 
 // Animation loop for smooth controls
 let animationFrameId = null;
+
 const animate = () => {
   // Update time uniform for shader animation
   const currentTime = performance.now() * 0.001;
@@ -334,7 +221,7 @@ const animate = () => {
   }
 
   // Update camera movement from keyboard input
-  updateCameraMovement();
+  appCamera.updateMovement(controls);
 
   // Update controls
   controls.update();
