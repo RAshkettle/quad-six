@@ -172,8 +172,8 @@ let animationFrameId = null;
 let lastTime = 0;
 
 const animate = () => {
-  // Calculate deltaTime
-  const currentTime = Date.now() * 0.001;
+  // Calculate deltaTime using performance.now for consistency
+  const currentTime = performance.now() * 0.001;
   const deltaTime = currentTime - lastTime;
   lastTime = currentTime;
 
@@ -185,15 +185,28 @@ const animate = () => {
     if (portal.visible) {
       portal.material.uniforms.time.value = currentTime;
 
+      // Debug: log portal state
+      console.log(
+        `Portal ${portal.userData.index} STATE: visible=${portal.visible}, isOpening=${portal.material.uniforms.isOpening.value}, isDespawning=${portal.material.uniforms.isDespawning.value}`
+      );
+
       // Handle opening animation
       if (portal.material.uniforms.isOpening.value > 0.5) {
         const openingTime = currentTime - portal.userData.openingStartTime;
         portal.material.uniforms.openingTime.value = openingTime;
+        console.log(
+          `Portal ${portal.userData.index} OPENING: ${openingTime.toFixed(
+            2
+          )}s / 2.0s`
+        );
 
         // Check if opening animation is complete (2 seconds duration)
         if (openingTime >= 2.0) {
+          console.log(
+            `Portal ${portal.userData.index} opening complete, switching to normal effect`
+          );
+          // ONLY set isOpening to 0 so portal shows normal effect
           portal.material.uniforms.isOpening.value = 0.0;
-          portal.material.uniforms.openingTime.value = 0.0;
 
           // Spawn aliens when portal opening is complete (only once per portal activation)
           if (!portal.userData.aliensSpawned) {
@@ -207,24 +220,38 @@ const animate = () => {
       if (portal.material.uniforms.isDespawning.value > 0.5) {
         const despawnTime = currentTime - portal.userData.despawnStartTime;
         portal.material.uniforms.despawnTime.value = despawnTime;
+        console.log(
+          `Portal ${portal.userData.index} DESPAWNING: ${despawnTime.toFixed(
+            2
+          )}s / 2.0s`
+        );
       }
     }
   });
 
-  // Handle portal lifecycle (8-second duration)
+  // Handle portal lifecycle (10-second total duration: 2s opening + 6s normal + 2s despawn)
   let hasActivePortals = false;
   portals.forEach((portal) => {
     if (portal.userData.active && !portal.userData.isDespawning) {
       hasActivePortals = true;
-      const activeTime = currentTime - portal.userData.activationTime;
+      const totalActiveTime = currentTime - portal.userData.activationTime;
+      console.log(
+        `Portal ${portal.userData.index} LIFECYCLE: ${totalActiveTime.toFixed(
+          2
+        )}s / 10.0s (active=${portal.userData.active}, despawning=${
+          portal.userData.isDespawning
+        })`
+      );
 
-      // Start despawn animation after 8 seconds
-      if (activeTime >= 8.0) {
+      // Start despawn animation after 10 seconds total (2s opening + 6s normal + 2s despawn)
+      if (totalActiveTime >= 10.0) {
+        console.log(
+          `Portal ${portal.userData.index} STARTING DESPAWN after 10 seconds`
+        );
         portal.userData.isDespawning = true;
         portal.userData.despawnStartTime = currentTime;
         portal.material.uniforms.isDespawning.value = 1.0;
         portal.material.uniforms.despawnTime.value = 0.0;
-        portal.material.uniforms.isOpening.value = 0.0; // Stop opening animation if still running
       }
     }
 
@@ -232,9 +259,17 @@ const animate = () => {
     if (portal.userData.isDespawning) {
       const despawnTime = currentTime - portal.userData.despawnStartTime;
       portal.material.uniforms.despawnTime.value = despawnTime;
+      console.log(
+        `Portal ${
+          portal.userData.index
+        } DESPAWN PROGRESS: ${despawnTime.toFixed(2)}s / 2.0s`
+      );
 
       // Complete despawn after 2 seconds
       if (despawnTime >= 2.0) {
+        console.log(
+          `Portal ${portal.userData.index} DESPAWN COMPLETE - hiding portal`
+        );
         portal.userData.active = false;
         portal.userData.isDespawning = false;
         portal.visible = false;

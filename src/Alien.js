@@ -127,9 +127,6 @@ export class Alien {
 
     // Check distance to target immediately
     const initialDistance = this.position.distanceTo(this.targetPosition);
-    console.log(
-      `Alien ${this.id}: Initial distance to target: ${initialDistance}`
-    );
 
     if (initialDistance < 1.0) {
       console.log(
@@ -141,12 +138,10 @@ export class Alien {
 
     // Calculate direction to station
     this.direction.subVectors(this.targetPosition, this.position).normalize();
-    console.log(`Alien ${this.id}: Direction calculated:`, this.direction);
 
     // Rotate alien to face the target
     const angle = Math.atan2(this.direction.x, this.direction.z);
-    this.model.rotation.y = angle;
-    console.log(`Alien ${this.id}: Rotated to angle:`, angle);
+    //this.model.rotation.y = angle;
   }
 
   update(deltaTime) {
@@ -166,12 +161,7 @@ export class Alien {
 
     this.position.add(movement);
     this.model.position.copy(this.position);
-
-    console.log(
-      `Alien ${this.id}: Position: (${this.position.x.toFixed(
-        1
-      )}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)})`
-    );
+    this.model.position.setY(0.0);
 
     // Check if reached target (within 2 units of station - increased from 1.0)
     const distanceToTarget = this.position.distanceTo(this.targetPosition);
