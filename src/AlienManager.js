@@ -2,8 +2,10 @@ import * as THREE from "three";
 import { Alien } from "./Alien.js";
 
 export class AlienManager {
-  constructor(scene) {
+  constructor(scene, player, ui) {
     this.scene = scene;
+    this.player = player;
+    this.ui = ui;
     this.aliens = [];
   }
 

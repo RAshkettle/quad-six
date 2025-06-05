@@ -3,6 +3,8 @@ export class Player {
     this.currentCredits = 350;
     this.health = 100;
     this.maxHealth = 100;
+    this.previousHealth = 100;
+    this.healthChanged = false;
   }
 
   // Method to add credits
@@ -21,12 +23,16 @@ export class Player {
 
   // Method to take damage
   takeDamage(amount) {
+    this.previousHealth = this.health;
     this.health = Math.max(0, this.health - amount);
+    this.healthChanged = this.health !== this.previousHealth;
   }
 
   // Method to heal
   heal(amount) {
+    this.previousHealth = this.health;
     this.health = Math.min(this.maxHealth, this.health + amount);
+    this.healthChanged = this.health !== this.previousHealth;
   }
 
   // Method to set max health (and optionally adjust current health)

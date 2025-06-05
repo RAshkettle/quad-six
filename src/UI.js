@@ -17,6 +17,12 @@ export class UI {
     if (this.creditsElement) {
       this.creditsElement.textContent = this.player.currentCredits;
     }
+
+    // Check if health changed and trigger animation
+    if (this.player.healthChanged) {
+      this.animateHealthChange(this.player.previousHealth, this.player.health);
+      this.player.healthChanged = false; // Reset the flag
+    }
   }
 
   // Method to be called when player stats change
@@ -46,8 +52,6 @@ export class UI {
         this.healthElement.style.textShadow = "0 0 8px rgba(78, 255, 78, 0.5)";
       }
     }, 300);
-
-    this.updateDisplay();
   }
 
   // Animate credits change
@@ -72,8 +76,6 @@ export class UI {
           "0 0 8px rgba(255, 221, 68, 0.5)";
       }
     }, 300);
-
-    this.updateDisplay();
   }
 
   // Show temporary message (for future use)

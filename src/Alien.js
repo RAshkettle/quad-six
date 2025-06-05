@@ -14,6 +14,11 @@ export class Alien {
     this.loader = new GLTFLoader();
     this.player = player;
 
+    console.log(
+      `Alien ${this.id}: Constructor - player reference:`,
+      !!this.player
+    );
+
     // Movement properties
     this.position = position.clone();
     this.targetPosition = new THREE.Vector3(0, 1.5, 14.5); // Station position - match Station.js
@@ -162,6 +167,7 @@ export class Alien {
   }
 
   reachTarget() {
+    console.log(`Alien ${this.id}: reachTarget() called`);
     this.isDying = true;
 
     // Play death animation if available
@@ -180,7 +186,16 @@ export class Alien {
 
     // Apply 2 damage to player
     if (this.player) {
+      const oldHealth = this.player.health;
       this.player.takeDamage(2);
+      console.log(
+        `Alien ${this.id}: Player took 2 damage, health: ${oldHealth} -> ${this.player.health}`
+      );
+      console.log(
+        `Alien ${this.id}: Player healthChanged flag: ${this.player.healthChanged}`
+      );
+    } else {
+      console.log(`Alien ${this.id}: NO PLAYER REFERENCE!`);
     }
 
     // Destroy after 1 second (time for death animation)

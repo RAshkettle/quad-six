@@ -328,7 +328,7 @@ const player = new Player();
 const ui = new UI(player);
 
 // Create alien manager
-const alienManager = new AlienManager(scene);
+const alienManager = new AlienManager(scene, player);
 
 // Sizes
 const sizes = {
