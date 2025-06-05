@@ -13,7 +13,7 @@ import "./style.css";
 const titleOverlay = document.getElementById("title-overlay");
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x6a4c93); // Purple sky color
+scene.background = new THREE.Color(0x4a2c5a); // Darker purple to match fog color
 
 // Setup lighting
 const lighting = new Lighting(scene);
@@ -106,6 +106,213 @@ plane.rotation.x = -Math.PI / 2; // Rotate 90 degrees to make it horizontal
 plane.position.y = 0; // Position it below the cube
 scene.add(plane);
 
+// Create custom edge fog system
+const createEdgeFog = () => {
+  const fogMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0.0 },
+      fogColor: { value: new THREE.Color(0x4a2c5a) }, // Darker purple fog
+      fogDensity: { value: 0.8 },
+      edgeDistance: { value: 0.5 }, // Half unit from edge
+    },
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      varying vec2 vUv;
+      
+      void main() {
+        vUv = uv;
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float time;
+      uniform vec3 fogColor;
+      uniform float fogDensity;
+      uniform float edgeDistance;
+      varying vec3 vWorldPosition;
+      varying vec2 vUv;
+      
+      void main() {
+        // Calculate distance from edge of the 30x30 plane
+        float planeHalfSize = 15.0;
+        float edgeStart = planeHalfSize - edgeDistance;
+        
+        // Distance from center
+        float distFromCenter = length(vec2(vWorldPosition.x, vWorldPosition.z));
+        float maxDist = max(abs(vWorldPosition.x), abs(vWorldPosition.z));
+        
+        // Calculate fog intensity based on distance from edge
+        float fogIntensity = 0.0;
+        if (maxDist > edgeStart) {
+          fogIntensity = (maxDist - edgeStart) / edgeDistance;
+          fogIntensity = smoothstep(0.0, 1.0, fogIntensity);
+        }
+        
+        // Add edge softening to prevent hard plane boundaries
+        float edgeSoften = 1.0;
+        float distFromPlaneEdge = min(
+          min(1.0 - abs(vUv.x - 0.5) * 2.0, 1.0 - abs(vUv.y - 0.5) * 2.0),
+          1.0
+        );
+        edgeSoften = smoothstep(0.0, 0.1, distFromPlaneEdge);
+        
+        // Add some swirling motion
+        float swirl = sin(time * 2.0 + vWorldPosition.x * 0.5) * 
+                     cos(time * 1.5 + vWorldPosition.z * 0.3) * 0.3 + 0.7;
+        
+        // Add vertical gradient for more realistic fog
+        float heightGradient = 1.0 - smoothstep(0.0, 10.0, vWorldPosition.y);
+        
+        float finalFogIntensity = fogIntensity * fogDensity * swirl * heightGradient * edgeSoften;
+        
+        // Ensure smooth blending with background
+        if (finalFogIntensity < 0.01) discard;
+        
+        gl_FragColor = vec4(fogColor, finalFogIntensity);
+      }
+    `,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  // Create fog walls around the edges
+  const fogWalls = [];
+
+  // Create vertical fog walls (tall rectangles around the perimeter)
+  const wallHeight = 20;
+  const wallThickness = 3;
+
+  // North wall
+  const northWall = new THREE.PlaneGeometry(30 + wallThickness * 2, wallHeight);
+  const northFog = new THREE.Mesh(northWall, fogMaterial);
+  northFog.position.set(0, wallHeight / 2, -15 - wallThickness / 2);
+  northFog.renderOrder = -1; // Render behind other objects
+  scene.add(northFog);
+  fogWalls.push(northFog);
+
+  // South wall
+  const southWall = new THREE.PlaneGeometry(30 + wallThickness * 2, wallHeight);
+  const southFog = new THREE.Mesh(southWall, fogMaterial);
+  southFog.position.set(0, wallHeight / 2, 15 + wallThickness / 2);
+  southFog.rotation.y = Math.PI;
+  southFog.renderOrder = -1;
+  scene.add(southFog);
+  fogWalls.push(southFog);
+
+  // East wall
+  const eastWall = new THREE.PlaneGeometry(30 + wallThickness * 2, wallHeight);
+  const eastFog = new THREE.Mesh(eastWall, fogMaterial);
+  eastFog.position.set(15 + wallThickness / 2, wallHeight / 2, 0);
+  eastFog.rotation.y = -Math.PI / 2;
+  eastFog.renderOrder = -1;
+  scene.add(eastFog);
+  fogWalls.push(eastFog);
+
+  // West wall
+  const westWall = new THREE.PlaneGeometry(30 + wallThickness * 2, wallHeight);
+  const westFog = new THREE.Mesh(westWall, fogMaterial);
+  westFog.position.set(-15 - wallThickness / 2, wallHeight / 2, 0);
+  westFog.rotation.y = Math.PI / 2;
+  westFog.renderOrder = -1;
+  scene.add(westFog);
+  fogWalls.push(westFog);
+
+  // Create horizontal fog planes at different heights for layered effect
+  for (let i = 0; i < 3; i++) {
+    const fogPlane = new THREE.PlaneGeometry(40, 40); // Larger planes for better coverage
+    const fog = new THREE.Mesh(fogPlane, fogMaterial);
+    fog.rotation.x = -Math.PI / 2;
+    fog.position.y = 5 + i * 3;
+    fog.renderOrder = -1;
+    scene.add(fog);
+    fogWalls.push(fog);
+  }
+
+  return { fogWalls, fogMaterial };
+};
+
+const { fogWalls, fogMaterial } = createEdgeFog();
+
+// Create atmospheric fog particles for extra mystique
+const createFogParticles = () => {
+  const particleCount = 200;
+  const positions = new Float32Array(particleCount * 3);
+  const scales = new Float32Array(particleCount);
+
+  for (let i = 0; i < particleCount; i++) {
+    // Position particles mostly around the edges
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 12 + Math.random() * 8; // Between 12 and 20 units from center
+
+    positions[i * 3] = Math.cos(angle) * distance;
+    positions[i * 3 + 1] = Math.random() * 15; // Height between 0 and 15
+    positions[i * 3 + 2] = Math.sin(angle) * distance;
+
+    scales[i] = Math.random() * 2 + 0.5;
+  }
+
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(positions, 3)
+  );
+  particleGeometry.setAttribute("scale", new THREE.BufferAttribute(scales, 1));
+
+  const particleMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0.0 },
+      fogColor: { value: new THREE.Color(0x6a4c93) },
+    },
+    vertexShader: `
+      attribute float scale;
+      uniform float time;
+      varying float vOpacity;
+      
+      void main() {
+        vec3 pos = position;
+        
+        // Add slow floating motion
+        pos.y += sin(time * 0.5 + position.x * 0.1) * 2.0;
+        pos.x += cos(time * 0.3 + position.z * 0.1) * 1.0;
+        
+        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+        gl_PointSize = scale * 50.0 * (1.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+        
+        // Calculate opacity based on distance from center
+        float distFromCenter = length(vec2(position.x, position.z));
+        vOpacity = smoothstep(10.0, 18.0, distFromCenter) * 0.3;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 fogColor;
+      varying float vOpacity;
+      
+      void main() {
+        float dist = length(gl_PointCoord - vec2(0.5));
+        if (dist > 0.5) discard;
+        
+        float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
+        gl_FragColor = vec4(fogColor, alpha * vOpacity);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  const particles = new THREE.Points(particleGeometry, particleMaterial);
+  scene.add(particles);
+
+  return { particles, particleMaterial };
+};
+
+const { particles, particleMaterial } = createFogParticles();
+
 // Create portals
 const portalsInstance = new Portals(scene);
 const portals = portalsInstance.getPortals();
@@ -195,6 +402,12 @@ const animate = () => {
 
   // Update time uniform for shader animation
   planeMaterial.uniforms.time.value = currentTime;
+
+  // Update fog animation
+  fogMaterial.uniforms.time.value = currentTime;
+
+  // Update particle animation
+  particleMaterial.uniforms.time.value = currentTime;
 
   // Update time and animation for visible portals (active or despawning)
   portals.forEach((portal) => {
