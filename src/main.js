@@ -135,12 +135,74 @@ controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent going below horizontal (w
 controls.minDistance = 1; // Minimum zoom distance
 controls.maxDistance = 50; // Maximum zoom distance
 
+// Keyboard controls for camera movement
+const keys = {
+  w: false,
+  a: false,
+  s: false,
+  d: false,
+  ArrowUp: false,
+  ArrowLeft: false,
+  ArrowDown: false,
+  ArrowRight: false,
+};
+
+const moveSpeed = 0.1;
+
+// Keyboard event listeners
+window.addEventListener("keydown", (event) => {
+  if (keys.hasOwnProperty(event.key)) {
+    keys[event.key] = true;
+  }
+});
+
+window.addEventListener("keyup", (event) => {
+  if (keys.hasOwnProperty(event.key)) {
+    keys[event.key] = false;
+  }
+});
+
+// Function to update camera position based on keyboard input
+function updateCameraMovement() {
+  const forward = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0);
+
+  // Get camera direction vectors
+  camera.getWorldDirection(forward);
+  right.crossVectors(forward, up).normalize();
+
+  // Flatten forward vector to prevent flying
+  forward.y = 0;
+  forward.normalize();
+
+  // Calculate movement
+  const movement = new THREE.Vector3();
+
+  // WASD movement
+  if (keys.w || keys.ArrowUp)
+    movement.add(forward.clone().multiplyScalar(moveSpeed));
+  if (keys.s || keys.ArrowDown)
+    movement.add(forward.clone().multiplyScalar(-moveSpeed));
+  if (keys.a || keys.ArrowLeft)
+    movement.add(right.clone().multiplyScalar(-moveSpeed));
+  if (keys.d || keys.ArrowRight)
+    movement.add(right.clone().multiplyScalar(moveSpeed));
+
+  // Apply movement to camera and controls target
+  camera.position.add(movement);
+  controls.target.add(movement);
+}
+
 renderer.render(scene, camera);
 
 // Animation loop for smooth controls
 const animate = () => {
   // Update time uniform for shader animation
   planeMaterial.uniforms.time.value = performance.now() * 0.001;
+
+  // Update camera movement from keyboard input
+  updateCameraMovement();
 
   // Update controls
   controls.update();
