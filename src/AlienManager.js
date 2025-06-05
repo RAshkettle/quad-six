@@ -66,6 +66,10 @@ export class AlienManager {
     this.aliens = [];
   }
 
+  getSwarmCount() {
+    return length(this.aliens);
+  }
+
   // Get all active aliens (useful for debugging or other systems)
   getAliens() {
     return this.aliens;

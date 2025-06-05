@@ -9,9 +9,11 @@ import { Player } from "./Player.js"; // Import Player class
 import { Portals } from "./Portals.js"; // Import Portals class
 import { Station } from "./Station.js"; // Import Station class
 import { UI } from "./UI.js"; // Import UI class
+import { SpawnTimer } from "./SpawnTimer.js"; // Import SpawnTimer
 import "./style.css";
 
 const titleOverlay = document.getElementById("title-overlay");
+var requestedSpawn = false;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x4a2c5a); // Darker purple to match fog color
@@ -318,6 +320,9 @@ const { particles, particleMaterial } = createFogParticles();
 const portalsInstance = new Portals(scene);
 const portals = portalsInstance.getPortals();
 
+// Create spawn timer (10s delay)
+const spawnTimer = new SpawnTimer(10);
+
 // Create station
 const station = new Station(scene);
 
@@ -534,8 +539,9 @@ titleOverlay.addEventListener(
   () => {
     titleOverlay.classList.add("hidden");
     audioControls.resumeAudioContext(); // Resume audio context on user gesture
+    // Start spawn timer for first wave
+    spawnTimer.start(() => portalsInstance.spawnEnemyPortals(audioControls));
     if (!animationFrameId) {
-      // Start animation loop if not already started
       animate();
     }
   },
