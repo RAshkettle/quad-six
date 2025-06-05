@@ -4,12 +4,89 @@ import "./style.css";
 
 const scene = new THREE.Scene();
 
-// Create a ground plane
+// Create a ground plane with hexagonal shader
 const planeGeometry = new THREE.PlaneGeometry(30, 30);
-const planeMaterial = new THREE.MeshBasicMaterial({
-  color: 0x000000,
+
+// Custom shader material for hexagonal tiling with pulsing purple light
+const planeMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    time: { value: 0.0 },
+    scale: { value: 80.0 },
+    baseColor: { value: new THREE.Color(0x0a0a0a) },
+    hexColor: { value: new THREE.Color(0x4a0e4e) },
+    glowColor: { value: new THREE.Color(0x8a2be2) },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float time;
+    uniform float scale;
+    uniform vec3 baseColor;
+    uniform vec3 hexColor;
+    uniform vec3 glowColor;
+    varying vec2 vUv;
+    
+    // Proper hexagonal distance function
+    float hexDistance(vec2 p) {
+      p = abs(p);
+      float c = dot(p, normalize(vec2(1.0, 1.732)));
+      c = max(c, p.x);
+      return c;
+    }
+    
+    // Convert to hexagonal grid coordinates
+    vec2 hexGrid(vec2 p) {
+      vec2 q = vec2(p.x * 2.0/3.0, (-p.x/3.0) + p.y * sqrt(3.0)/3.0);
+      vec2 pii = floor(q + 0.5);
+      vec2 pif = q - pii;
+      return vec2(pii.x + pii.y/2.0, pii.y * 3.0/4.0);
+    }
+    
+    void main() {
+      vec2 uv = (vUv - 0.5) * scale;
+      
+      // Transform to hexagonal coordinates
+      vec2 r = vec2(1.0, sqrt(3.0));
+      vec2 h = r * 0.5;
+      
+      // Get the hexagonal cell
+      vec2 a = mod(uv, r) - h;
+      vec2 b = mod(uv - h, r) - h;
+      vec2 gv = dot(a, a) < dot(b, b) ? a : b;
+      
+      // Calculate distance to hexagon edge
+      float dist = hexDistance(gv);
+      
+      // Create thin hexagonal outline
+      float hexLine = smoothstep(0.47, 0.5, dist) - smoothstep(0.5, 0.53, dist);
+      
+      // Pulsing animation for the glow
+      float pulse = (sin(time * 2.0) + sin(time * 3.5)) * 0.25 + 0.5;
+      float hexPulse = sin(time * 4.0 + length(uv) * 0.5) * 0.5 + 0.5;
+      
+      // Base color
+      vec3 color = baseColor;
+      
+      // Add hexagon outline with glow
+      float glowIntensity = hexPulse * pulse * 0.8 + 0.2;
+      vec3 hexGlow = mix(hexColor, glowColor, glowIntensity);
+      color = mix(color, hexGlow, hexLine);
+      
+      // Add subtle inner glow to make hexagons more visible
+      float innerGlow = (1.0 - smoothstep(0.2, 0.5, dist)) * 0.1 * pulse;
+      color += glowColor * innerGlow;
+      
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `,
   side: THREE.DoubleSide,
 });
+
 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
 plane.rotation.x = -Math.PI / 2; // Rotate 90 degrees to make it horizontal
 plane.position.y = -2; // Position it below the cube
@@ -50,6 +127,9 @@ renderer.render(scene, camera);
 
 // Animation loop for smooth controls
 const animate = () => {
+  // Update time uniform for shader animation
+  planeMaterial.uniforms.time.value = performance.now() * 0.001;
+
   // Update controls
   controls.update();
 
