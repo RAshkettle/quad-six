@@ -86,12 +86,7 @@ export class Alien {
             this.movingAction.paused = false;
             // Start the animation immediately
             this.movingAction.play();
-            console.log(`Alien ${this.id}: Animation started`);
           } else {
-            console.log(
-              `Alien ${this.id}: No 'moving' animation found, available:`,
-              gltf.animations.map((a) => a.name)
-            );
             // Fallback to first animation if no "moving" animation found
             if (gltf.animations.length > 0) {
               this.movingAction = this.mixer.clipAction(gltf.animations[0]);
@@ -101,10 +96,6 @@ export class Alien {
               this.movingAction.enabled = true;
               this.movingAction.paused = false;
               this.movingAction.play();
-              console.log(
-                `Alien ${this.id}: Using fallback animation:`,
-                gltf.animations[0].name
-              );
             }
           }
 
@@ -114,13 +105,10 @@ export class Alien {
             this.deathAction.clampWhenFinished = true;
             this.deathAction.enabled = false;
           }
-        } else {
-          console.log(`Alien ${this.id}: No animations found in model`);
         }
 
         // Add to scene
         this.scene.add(this.model);
-        console.log(`Alien ${this.id}: Added to scene`);
 
         // Calculate direction to station immediately
         this.direction
@@ -156,19 +144,12 @@ export class Alien {
       // Check if reached target (within 2 units of station)
       const distanceToTarget = this.position.distanceTo(this.targetPosition);
       if (distanceToTarget < 2.0) {
-        console.log(
-          `Alien ${
-            this.id
-          }: Reached target! Distance: ${distanceToTarget.toFixed(2)}`
-        );
         this.reachTarget();
       }
     }
   }
 
   reachTarget() {
-    console.log(`Alien ${this.id}: reachTarget() called`);
-
     // Play death sound effect
     const boomSound = new Audio("/boom.mp3");
     boomSound.volume = 0.05;
@@ -194,14 +175,6 @@ export class Alien {
     if (this.player) {
       const oldHealth = this.player.health;
       this.player.takeDamage(2);
-      console.log(
-        `Alien ${this.id}: Player took 2 damage, health: ${oldHealth} -> ${this.player.health}`
-      );
-      console.log(
-        `Alien ${this.id}: Player healthChanged flag: ${this.player.healthChanged}`
-      );
-    } else {
-      console.log(`Alien ${this.id}: NO PLAYER REFERENCE!`);
     }
 
     // Destroy after 1 second (time for death animation)

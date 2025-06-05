@@ -21,7 +21,6 @@ export class AudioControls {
     this.audioLoader.load(
       "/portalIdle.mp3",
       (buffer) => {
-        console.log("Portal idle sound loaded successfully");
         this.portalIdleSound.setBuffer(buffer);
         this.portalIdleSound.setLoop(true); // Restore original looping behavior
         this.portalIdleSound.setVolume(0.12); // 12% volume
@@ -66,28 +65,14 @@ export class AudioControls {
   }
 
   startIdleSound() {
-    console.log(
-      "startIdleSound called, audioContextResumed:",
-      this.audioContextResumed
-    );
     if (!this.audioContextResumed) return;
     if (
       !this.isIdleSoundPlaying &&
       this.portalIdleSound.buffer &&
       !this.portalIdleSound.isPlaying
     ) {
-      console.log("Starting portal idle sound");
       this.portalIdleSound.play();
       this.isIdleSoundPlaying = true;
-    } else {
-      console.log(
-        "Cannot start portal idle sound - buffer:",
-        !!this.portalIdleSound.buffer,
-        "isPlaying:",
-        this.portalIdleSound.isPlaying,
-        "isIdleSoundPlaying:",
-        this.isIdleSoundPlaying
-      );
     }
   }
 

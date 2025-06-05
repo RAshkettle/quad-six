@@ -265,7 +265,6 @@ export class Portals {
     const currentTime = performance.now() * 0.001;
 
     if (activePortals.length === 3) {
-      console.log("Deactivating all 3 active portals and spawning new ones");
       // If 3 are active, deactivate all and pick 3 new random ones
       portals.forEach((portal) => {
         portal.userData.active = false;
@@ -279,10 +278,6 @@ export class Portals {
       // Pick 3 random portals to activate
       const shuffled = [...portals].sort(() => 0.5 - Math.random());
       for (let i = 0; i < 3; i++) {
-        console.log(
-          `Activating portal ${shuffled[i].userData.index} at position:`,
-          shuffled[i].position
-        );
         shuffled[i].userData.active = true;
         shuffled[i].visible = true;
         // Start opening animation
@@ -290,18 +285,11 @@ export class Portals {
         shuffled[i].userData.activationTime = currentTime;
         shuffled[i].material.uniforms.isOpening.value = 1.0;
         shuffled[i].material.uniforms.openingTime.value = 0.0;
-        console.log(`Portal ${shuffled[i].userData.index} uniforms set:`, {
-          isOpening: shuffled[i].material.uniforms.isOpening.value,
-          openingTime: shuffled[i].material.uniforms.openingTime.value,
-          visible: shuffled[i].visible,
-        });
       }
 
       // Start idle sound when portals become active
-      console.log("Starting portal idle sound");
       if (audioControls) audioControls.startIdleSound();
     } else {
-      console.log(`Need to activate ${3 - activePortals.length} more portals`);
       // If less than 3 are active, activate random ones until we have 3
       const inactivePortals = portals.filter(
         (portal) => !portal.userData.active
@@ -312,10 +300,6 @@ export class Portals {
         () => 0.5 - Math.random()
       );
       for (let i = 0; i < Math.min(needed, shuffledInactive.length); i++) {
-        console.log(
-          `Activating portal ${shuffledInactive[i].userData.index} at position:`,
-          shuffledInactive[i].position
-        );
         shuffledInactive[i].userData.active = true;
         shuffledInactive[i].visible = true;
         // Start opening animation
@@ -323,21 +307,10 @@ export class Portals {
         shuffledInactive[i].userData.activationTime = currentTime;
         shuffledInactive[i].material.uniforms.isOpening.value = 1.0;
         shuffledInactive[i].material.uniforms.openingTime.value = 0.0;
-        console.log(
-          `Portal ${shuffledInactive[i].userData.index} uniforms set:`,
-          {
-            isOpening: shuffledInactive[i].material.uniforms.isOpening.value,
-            openingTime:
-              shuffledInactive[i].material.uniforms.openingTime.value,
-            visible: shuffledInactive[i].visible,
-          }
-        );
       }
 
       // Start idle sound when portals become active (if not already playing)
-      console.log("Starting portal idle sound");
       if (audioControls) audioControls.startIdleSound();
     }
-    console.log("=== SPAWN ENEMY PORTALS COMPLETE ===");
   }
 }
