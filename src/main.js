@@ -128,7 +128,7 @@ const camera = appCamera.self; // Keep a direct reference for convenience if nee
 const audioControls = new AudioControls(camera);
 
 // Initialize Debug Controls
-const debugControls = new DebugControls(portalsInstance, audioControls);
+const debugControls = new DebugControls(portalsInstance, audioControls, camera);
 
 // Canvas
 const canvas = document.querySelector("#webgl");
@@ -229,6 +229,9 @@ const animate = () => {
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);
+
+  // Update debug controls to reflect camera position changes
+  debugControls.updateCameraControllers();
 
   // Update controls
   controls.update();
