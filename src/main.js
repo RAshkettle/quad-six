@@ -8,6 +8,7 @@ import { Lighting } from "./Lighting.js";
 import { Player } from "./Player.js"; // Import Player class
 import { Portals } from "./Portals.js"; // Import Portals class
 import { Station } from "./Station.js"; // Import Station class
+import { UI } from "./UI.js"; // Import UI class
 import "./style.css";
 
 const titleOverlay = document.getElementById("title-overlay");
@@ -323,6 +324,9 @@ const station = new Station(scene);
 // Create player
 const player = new Player();
 
+// Create UI
+const ui = new UI(player);
+
 // Create alien manager
 const alienManager = new AlienManager(scene);
 
@@ -393,12 +397,19 @@ renderer.render(scene, camera);
 // Animation loop for smooth controls
 let animationFrameId = null;
 let lastTime = 0;
+let lastCreditTime = 0; // Track time for credit earning
 
 const animate = () => {
   // Calculate deltaTime using performance.now for consistency
   const currentTime = performance.now() * 0.001;
   const deltaTime = currentTime - lastTime;
   lastTime = currentTime;
+
+  // Credit earning system - add 1 credit every 2 seconds
+  if (currentTime - lastCreditTime >= 2.0) {
+    player.addCredits(1);
+    lastCreditTime = currentTime;
+  }
 
   // Update time uniform for shader animation
   planeMaterial.uniforms.time.value = currentTime;
@@ -518,6 +529,9 @@ const animate = () => {
 
   // Update alien manager with proper deltaTime
   alienManager.update(deltaTime);
+
+  // Update UI display
+  ui.updateDisplay();
 
   // Update camera movement from keyboard input
   appCamera.updateMovement(controls);
