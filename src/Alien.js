@@ -16,7 +16,7 @@ export class Alien {
     this.position = position.clone();
     this.targetPosition = new THREE.Vector3(0, 1.5, 14.5); // Station position - match Station.js
     this.walkSpeed = Math.random() + 1.0; // Random speed between 1.0 and 2.0 units per second
-    this.isWalking = false;
+    this.isDying = false;
     this.direction = new THREE.Vector3();
 
     this.loadAlien();
@@ -101,10 +101,12 @@ export class Alien {
 
         // Add to scene
         this.scene.add(this.model);
-        console.log(`Alien ${this.id}: Added to scene`); // Add this
+        console.log(`Alien ${this.id}: Added to scene`);
 
-        // Start walking toward the station
-        this.startWalking();
+        // Calculate direction to station immediately
+        this.direction
+          .subVectors(this.targetPosition, this.position)
+          .normalize();
       },
       (progress) => {
         // Add this
@@ -115,68 +117,38 @@ export class Alien {
     );
   }
 
-  startWalking() {
-    if (!this.model) return;
-
-    console.log(
-      `Alien ${this.id}: Starting to walk from`,
-      this.position,
-      "to",
-      this.targetPosition
-    );
-
-    // Check distance to target immediately
-    const initialDistance = this.position.distanceTo(this.targetPosition);
-
-    if (initialDistance < 1.0) {
-      console.log(
-        `Alien ${this.id}: WARNING - Already too close to target! Will be destroyed immediately.`
-      );
-    }
-
-    this.isWalking = true;
-
-    // Calculate direction to station
-    this.direction.subVectors(this.targetPosition, this.position).normalize();
-
-    // Rotate alien to face the target
-    const angle = Math.atan2(this.direction.x, this.direction.z);
-    //this.model.rotation.y = angle;
-  }
-
   update(deltaTime) {
     // Update animation mixer if it exists
     if (this.mixer) {
       this.mixer.update(deltaTime);
     }
 
-    if (!this.model || !this.isWalking) {
-      return;
-    }
+    // Move toward target unless dying
+    if (this.model && !this.isDying) {
+      // Move toward target
+      const movement = this.direction
+        .clone()
+        .multiplyScalar(this.walkSpeed * deltaTime);
 
-    // Move toward target
-    const movement = this.direction
-      .clone()
-      .multiplyScalar(this.walkSpeed * deltaTime);
+      this.position.add(movement);
+      this.model.position.copy(this.position);
+      this.model.position.setY(0.0);
 
-    this.position.add(movement);
-    this.model.position.copy(this.position);
-    this.model.position.setY(0.0);
-
-    // Check if reached target (within 2 units of station - increased from 1.0)
-    const distanceToTarget = this.position.distanceTo(this.targetPosition);
-    if (distanceToTarget < 2.0) {
-      console.log(
-        `Alien ${this.id}: Reached target! Distance: ${distanceToTarget.toFixed(
-          2
-        )}`
-      );
-      this.reachTarget();
+      // Check if reached target (within 2 units of station)
+      const distanceToTarget = this.position.distanceTo(this.targetPosition);
+      if (distanceToTarget < 2.0) {
+        console.log(
+          `Alien ${
+            this.id
+          }: Reached target! Distance: ${distanceToTarget.toFixed(2)}`
+        );
+        this.reachTarget();
+      }
     }
   }
 
   reachTarget() {
-    this.isWalking = false;
+    this.isDying = true;
 
     // Here you can add logic for when alien reaches the station
     // For now, we'll just remove the alien
