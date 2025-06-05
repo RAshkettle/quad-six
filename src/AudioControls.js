@@ -54,7 +54,6 @@ export class AudioControls {
   _playLoadedSounds() {
     if (this.backgroundMusic.buffer && !this.backgroundMusic.isPlaying) {
       this.backgroundMusic.play();
-      console.log("Background music started after user gesture");
     }
   }
 
