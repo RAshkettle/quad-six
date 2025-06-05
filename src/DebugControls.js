@@ -1,14 +1,16 @@
 import { GUI } from "lil-gui";
 
 export class DebugControls {
-  constructor(portalsInstance, audioControls, camera) {
+  constructor(portalsInstance, audioControls, camera, player) {
     this.portalsInstance = portalsInstance;
     this.audioControls = audioControls;
     this.camera = camera;
+    this.player = player;
     this.gui = new GUI();
 
     // Store references to the controllers for updating
     this.cameraControllers = {};
+    this.playerControllers = {};
 
     this.setupControls();
   }
@@ -59,6 +61,35 @@ export class DebugControls {
 
     // Open the camera folder by default
     cameraFolder.open();
+
+    // Create Player folder
+    const playerFolder = this.gui.addFolder("Player Stats");
+
+    // Add player controls and store references
+    this.playerControllers.currentCredits = playerFolder
+      .add(this.player, "currentCredits", 0, 10000, 1)
+      .name("Credits");
+
+    this.playerControllers.health = playerFolder
+      .add(this.player, "health", 0, this.player.maxHealth, 1)
+      .name("Health");
+
+    this.playerControllers.maxHealth = playerFolder
+      .add(this.player, "maxHealth", 1, 1000, 1)
+      .name("Max Health")
+      .onChange(() => {
+        // Update health controller range when max health changes
+        this.playerControllers.health.max(this.player.maxHealth);
+        // Cap current health to new max
+        this.player.health = Math.min(
+          this.player.health,
+          this.player.maxHealth
+        );
+        this.updatePlayerControllers();
+      });
+
+    // Open the player folder by default
+    playerFolder.open();
   }
 
   // Method to add more controls later if needed
@@ -76,6 +107,19 @@ export class DebugControls {
     }
     if (this.cameraControllers.z) {
       this.cameraControllers.z.updateDisplay();
+    }
+  }
+
+  // Method to update player controllers when values change externally
+  updatePlayerControllers() {
+    if (this.playerControllers.currentCredits) {
+      this.playerControllers.currentCredits.updateDisplay();
+    }
+    if (this.playerControllers.health) {
+      this.playerControllers.health.updateDisplay();
+    }
+    if (this.playerControllers.maxHealth) {
+      this.playerControllers.maxHealth.updateDisplay();
     }
   }
 

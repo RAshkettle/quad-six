@@ -3,7 +3,7 @@ import * as THREE from "three";
 export class AppCamera {
   constructor(sizes, scene) {
     this.instance = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
-    this.instance.position.z = 15;
+    this.instance.position.z = 13.9;
     // You might want to set an initial Y position for a better overview
     // this.instance.position.y = 1;
     scene.add(this.instance);

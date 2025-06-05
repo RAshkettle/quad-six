@@ -4,6 +4,7 @@ import { AppCamera } from "./AppCamera.js"; // Import AppCamera
 import { AudioControls } from "./AudioControls.js"; // Import AudioControls
 import { DebugControls } from "./DebugControls.js"; // Import DebugControls
 import { Lighting } from "./Lighting.js";
+import { Player } from "./Player.js"; // Import Player class
 import { Portals } from "./Portals.js"; // Import Portals class
 import { Station } from "./Station.js"; // Import Station class
 import "./style.css";
@@ -111,6 +112,9 @@ const portals = portalsInstance.getPortals();
 // Create station
 const station = new Station(scene);
 
+// Create player
+const player = new Player();
+
 // Sizes
 const sizes = {
   width: window.innerWidth,
@@ -128,7 +132,12 @@ const camera = appCamera.self; // Keep a direct reference for convenience if nee
 const audioControls = new AudioControls(camera);
 
 // Initialize Debug Controls
-const debugControls = new DebugControls(portalsInstance, audioControls, camera);
+const debugControls = new DebugControls(
+  portalsInstance,
+  audioControls,
+  camera,
+  player
+);
 
 // Canvas
 const canvas = document.querySelector("#webgl");
