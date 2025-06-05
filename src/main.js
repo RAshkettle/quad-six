@@ -441,7 +441,18 @@ let isIdleSoundPlaying = false;
 audioLoader.load("public/portalIdle.mp3", function (buffer) {
   portalIdleSound.setBuffer(buffer);
   portalIdleSound.setLoop(true);
-  portalIdleSound.setVolume(0.5);
+  portalIdleSound.setVolume(0.12); // 12% volume
+});
+
+// Load background music
+const backgroundMusic = new THREE.Audio(listener);
+
+audioLoader.load("public/backgroundMusic.mp3", function (buffer) {
+  backgroundMusic.setBuffer(buffer);
+  backgroundMusic.setLoop(true);
+  backgroundMusic.setVolume(0.1); // 10% volume
+  backgroundMusic.play();
+  console.log("Background music started");
 });
 
 // Function to start idle sound if not already playing
