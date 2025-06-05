@@ -110,6 +110,8 @@ const portalMaterial = new THREE.ShaderMaterial({
   uniforms: {
     time: { value: 0.0 },
     resolution: { value: new THREE.Vector2(512, 512) },
+    openingTime: { value: 0.0 }, // Time since portal started opening
+    isOpening: { value: 0.0 }, // 1.0 when opening animation is active
   },
   vertexShader: `
     varying vec2 vUv;
@@ -121,6 +123,8 @@ const portalMaterial = new THREE.ShaderMaterial({
   fragmentShader: `
     uniform float time;
     uniform vec2 resolution;
+    uniform float openingTime;
+    uniform float isOpening;
     varying vec2 vUv;
     
     vec2 hash(vec2 p) {
@@ -179,15 +183,71 @@ const portalMaterial = new THREE.ShaderMaterial({
         return;
       }
       
-      // Use the original UV without aspect ratio correction for the effect
-      float t = pow(fbm(uv * 0.3), 2.0);
+      // Portal opening animation
+      if (isOpening > 0.5) {
+        float openDuration = 2.0; // 2 second opening animation
+        float progress = clamp(openingTime / openDuration, 0.0, 1.0);
+        
+        if (progress < 1.0) {
+          // Phase 1: Bright center explosion (first 0.5 seconds)
+          if (progress < 0.25) {
+            float centerPhase = progress / 0.25;
+            float brightness = (1.0 - centerPhase) * 10.0; // Very bright center
+            float radius = centerPhase * 0.3; // Expanding bright core
+            
+            float centerDist = smoothstep(radius - 0.1, radius, distFromCenter);
+            vec3 centerColor = vec3(0.4, 0.8, 1.0) * brightness; // Bright blue-white
+            
+            float alpha = (1.0 - centerDist) * circleMask * brightness * 0.3;
+            gl_FragColor = vec4(centerColor, alpha);
+            return;
+          }
+          
+          // Phase 2: Explosion wave (0.25 - 0.75)
+          else if (progress < 0.75) {
+            float wavePhase = (progress - 0.25) / 0.5;
+            float waveRadius = wavePhase * 1.2; // Wave expands outward
+            
+            // Create explosion wave ring
+            float waveDist = abs(distFromCenter - waveRadius);
+            float waveIntensity = 1.0 - smoothstep(0.0, 0.2, waveDist);
+            waveIntensity *= (1.0 - wavePhase); // Fade as it expands
+            
+            // Bright explosion color
+            vec3 explosionColor = vec3(0.1, 0.6, 1.0) * waveIntensity * 5.0;
+            
+            float alpha = waveIntensity * circleMask;
+            gl_FragColor = vec4(explosionColor, alpha);
+            return;
+          }
+          
+          // Phase 3: Portal formation (0.75 - 1.0)
+          else {
+            float portalPhase = (progress - 0.75) / 0.25;
+            
+            // Start introducing the portal effect
+            float t = pow(fbm(uv * 0.3), 2.0) * portalPhase;
+            t *= 1.5;
+            
+            // Mix explosion remnants with portal
+            float explosionRemnant = (1.0 - portalPhase) * 0.5;
+            vec3 explosionColor = vec3(0.1, 0.4, 1.0) * explosionRemnant;
+            vec3 portalColor = vec3(t * 2.0, t * 4.0, t * 8.0);
+            
+            vec3 finalColor = mix(explosionColor, portalColor, portalPhase);
+            float alpha = (t + explosionRemnant) * circleMask;
+            
+            gl_FragColor = vec4(finalColor, alpha);
+            return;
+          }
+        }
+      }
       
-      // Enhance the effect intensity
+      // Normal portal effect (when not opening or after opening is complete)
+      float t = pow(fbm(uv * 0.3), 2.0);
       t *= 1.5;
       
-      // Combine the effect intensity with the circular mask for alpha
       float alpha = t * circleMask;
-      
       vec3 color = vec3(t * 2.0, t * 4.0, t * 8.0);
       gl_FragColor = vec4(color, alpha);
     }
@@ -204,11 +264,19 @@ const portalSpacing = planeWidth / (portalCount + 1); // Space them evenly with 
 const farEdgeZ = -14.5; // Half unit in from the far edge (-15)
 
 for (let i = 0; i < portalCount; i++) {
-  const portal = new THREE.Mesh(portalGeometry, portalMaterial);
+  // Create a unique material for each portal to have independent opening animations
+  const portalMaterialInstance = portalMaterial.clone();
+  const portal = new THREE.Mesh(portalGeometry, portalMaterialInstance);
+
   // Position from left to right: -12 to +12 (evenly spaced)
   const xPosition = -planeWidth / 2 + portalSpacing * (i + 1);
   portal.position.set(xPosition, 0, farEdgeZ); // Y = 0 to sit on ground plane at Y = -2
-  portal.userData = { active: false, index: i }; // Track active status and index
+  portal.userData = {
+    active: false,
+    index: i,
+    openingStartTime: 0, // When the opening animation started
+    activationTime: 0, // When the portal became active (for 8-second lifecycle)
+  };
   portal.visible = false; // Start all portals as invisible
   portals.push(portal);
   scene.add(portal);
@@ -222,11 +290,14 @@ function togglePortalStatus() {
   const activePortals = portals.filter((portal) => portal.userData.active);
   console.log("Currently active portals:", activePortals.length);
 
+  const currentTime = performance.now() * 0.001;
+
   if (activePortals.length === 3) {
     // If 3 are active, deactivate all and pick 3 new random ones
     portals.forEach((portal) => {
       portal.userData.active = false;
       portal.visible = false;
+      portal.material.uniforms.isOpening.value = 0.0;
     });
 
     // Pick 3 random portals to activate
@@ -234,7 +305,15 @@ function togglePortalStatus() {
     for (let i = 0; i < 3; i++) {
       shuffled[i].userData.active = true;
       shuffled[i].visible = true;
+      // Start opening animation
+      shuffled[i].userData.openingStartTime = currentTime;
+      shuffled[i].userData.activationTime = currentTime;
+      shuffled[i].material.uniforms.isOpening.value = 1.0;
+      shuffled[i].material.uniforms.openingTime.value = 0.0;
     }
+
+    // Start idle sound when portals become active
+    startIdleSound();
   } else {
     // If less than 3 are active, activate random ones until we have 3
     const inactivePortals = portals.filter((portal) => !portal.userData.active);
@@ -246,7 +325,15 @@ function togglePortalStatus() {
     for (let i = 0; i < Math.min(needed, shuffledInactive.length); i++) {
       shuffledInactive[i].userData.active = true;
       shuffledInactive[i].visible = true;
+      // Start opening animation
+      shuffledInactive[i].userData.openingStartTime = currentTime;
+      shuffledInactive[i].userData.activationTime = currentTime;
+      shuffledInactive[i].material.uniforms.isOpening.value = 1.0;
+      shuffledInactive[i].material.uniforms.openingTime.value = 0.0;
     }
+
+    // Start idle sound when portals become active (if not already playing)
+    startIdleSound();
   }
 
   console.log(
@@ -267,6 +354,39 @@ const sizes = {
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
 camera.position.z = 3;
 scene.add(camera);
+
+// Audio system for portal sounds
+const audioLoader = new THREE.AudioLoader();
+const listener = new THREE.AudioListener();
+camera.add(listener);
+
+// Load portal idle sound
+const portalIdleSound = new THREE.Audio(listener);
+let isIdleSoundPlaying = false;
+
+audioLoader.load("public/portalIdle.mp3", function (buffer) {
+  portalIdleSound.setBuffer(buffer);
+  portalIdleSound.setLoop(true);
+  portalIdleSound.setVolume(0.5);
+});
+
+// Function to start idle sound if not already playing
+function startIdleSound() {
+  if (!isIdleSoundPlaying && portalIdleSound.buffer) {
+    portalIdleSound.play();
+    isIdleSoundPlaying = true;
+    console.log("Portal idle sound started");
+  }
+}
+
+// Function to stop idle sound
+function stopIdleSound() {
+  if (isIdleSoundPlaying) {
+    portalIdleSound.stop();
+    isIdleSoundPlaying = false;
+    console.log("Portal idle sound stopped");
+  }
+}
 
 // Canvas
 const canvas = document.querySelector("#webgl");
@@ -364,12 +484,48 @@ const animate = () => {
   const currentTime = performance.now() * 0.001;
   planeMaterial.uniforms.time.value = currentTime;
 
-  // Update time for only visible/active portals
+  // Update time and opening animation for visible/active portals
   portals.forEach((portal) => {
     if (portal.visible && portal.userData.active) {
       portal.material.uniforms.time.value = currentTime;
+
+      // Handle opening animation
+      if (portal.material.uniforms.isOpening.value > 0.5) {
+        const openingTime = currentTime - portal.userData.openingStartTime;
+        portal.material.uniforms.openingTime.value = openingTime;
+
+        // Check if opening animation is complete (2 seconds duration)
+        if (openingTime >= 2.0) {
+          portal.material.uniforms.isOpening.value = 0.0;
+          portal.material.uniforms.openingTime.value = 0.0;
+        }
+      }
     }
   });
+
+  // Handle portal lifecycle (8-second duration)
+  let hasActivePortals = false;
+  portals.forEach((portal) => {
+    if (portal.userData.active) {
+      hasActivePortals = true;
+      const activeTime = currentTime - portal.userData.activationTime;
+
+      // Deactivate portal after 8 seconds
+      if (activeTime >= 8.0) {
+        portal.userData.active = false;
+        portal.visible = false;
+        portal.material.uniforms.isOpening.value = 0.0;
+        console.log(
+          `Portal ${portal.userData.index} deactivated after 8 seconds`
+        );
+      }
+    }
+  });
+
+  // Stop idle sound if no portals are active
+  if (!hasActivePortals && isIdleSoundPlaying) {
+    stopIdleSound();
+  }
 
   // Update camera movement from keyboard input
   updateCameraMovement();
