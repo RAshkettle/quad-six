@@ -2,11 +2,13 @@ import * as THREE from "three";
 import { Alien } from "./Alien.js";
 
 export class AlienManager {
-  constructor(scene, player, ui) {
+  constructor(scene, player, ui, spawnTimer, spawnFunc) {
     this.scene = scene;
     this.player = player;
     this.ui = ui;
     this.aliens = [];
+    this.spawnTimer = spawnTimer;
+    this.spawnFunc = spawnFunc;
   }
 
   // Spawn aliens at a specific portal position
@@ -23,7 +25,7 @@ export class AlienManager {
       );
 
       const spawnPosition = portalPosition.clone().add(offset);
-      const alien = new Alien(this.scene, spawnPosition, this.player);
+      const alien = new Alien(this.scene, spawnPosition, this.player, this);
       this.aliens.push(alien);
     }
   }
@@ -67,7 +69,13 @@ export class AlienManager {
   }
 
   getSwarmCount() {
-    return length(this.aliens);
+    return this.aliens.length;
+  }
+
+  notifyOfCreepDeath() {
+    if (this.getSwarmCount() === 0) {
+      this.spawnTimer.start(this.spawnFunc);
+    }
   }
 
   // Get all active aliens (useful for debugging or other systems)

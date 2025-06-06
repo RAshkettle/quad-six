@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 export class Alien {
   static nextId = 1;
 
-  constructor(scene, position, player) {
+  constructor(scene, position, player, alienManager) {
     this.scene = scene;
     this.id = Alien.nextId++;
     this.model = null;
@@ -13,11 +13,7 @@ export class Alien {
     this.deathAction = null;
     this.loader = new GLTFLoader();
     this.player = player;
-
-    console.log(
-      `Alien ${this.id}: Constructor - player reference:`,
-      !!this.player
-    );
+    this.alienManager = alienManager;
 
     // Movement properties
     this.position = position.clone();
@@ -194,6 +190,8 @@ export class Alien {
     if (this.internalLight) {
       this.internalLight.dispose();
     }
+
+    this.alienManager.notifyOfCreepDeath();
   }
 
   // Get the current position of the alien

@@ -7,10 +7,10 @@ import { DebugControls } from "./DebugControls.js"; // Import DebugControls
 import { Lighting } from "./Lighting.js";
 import { Player } from "./Player.js"; // Import Player class
 import { Portals } from "./Portals.js"; // Import Portals class
-import { Station } from "./Station.js"; // Import Station class
-import { UI } from "./UI.js"; // Import UI class
 import { SpawnTimer } from "./SpawnTimer.js"; // Import SpawnTimer
+import { Station } from "./Station.js"; // Import Station class
 import "./style.css";
+import { UI } from "./UI.js"; // Import UI class
 
 const titleOverlay = document.getElementById("title-overlay");
 var requestedSpawn = false;
@@ -332,9 +332,6 @@ const player = new Player();
 // Create UI
 const ui = new UI(player);
 
-// Create alien manager
-const alienManager = new AlienManager(scene, player);
-
 // Sizes
 const sizes = {
   width: window.innerWidth,
@@ -350,6 +347,11 @@ const camera = appCamera.self; // Keep a direct reference for convenience if nee
 
 // Initialize AudioControls
 const audioControls = new AudioControls(camera);
+
+// Create alien manager
+const alienManager = new AlienManager(scene, player, ui, spawnTimer, () =>
+  portalsInstance.spawnEnemyPortals(audioControls)
+);
 
 // Initialize Debug Controls
 const debugControls = new DebugControls(
@@ -403,6 +405,7 @@ renderer.render(scene, camera);
 let animationFrameId = null;
 let lastTime = 0;
 let lastCreditTime = 0; // Track time for credit earning
+let lastAlienCount = 0; // Track last alien count for wave detection
 
 const animate = () => {
   // Calculate deltaTime using performance.now for consistency
@@ -515,8 +518,6 @@ const animate = () => {
   animationFrameId = window.requestAnimationFrame(animate);
 };
 
-// animate(); // Don't start animation loop immediately
-
 // Handle window resize
 window.addEventListener("resize", () => {
   // Update sizes
@@ -538,12 +539,10 @@ titleOverlay.addEventListener(
   "click",
   () => {
     titleOverlay.classList.add("hidden");
-    audioControls.resumeAudioContext(); // Resume audio context on user gesture
-    // Start spawn timer for first wave
+    audioControls.resumeAudioContext();
+    console.log("Click: scheduling first wave timer");
     spawnTimer.start(() => portalsInstance.spawnEnemyPortals(audioControls));
-    if (!animationFrameId) {
-      animate();
-    }
+    if (!animationFrameId) animate();
   },
   { once: true }
 ); // Ensure this only runs once
