@@ -533,7 +533,6 @@ titleOverlay.addEventListener(
   () => {
     titleOverlay.classList.add("hidden");
     audioControls.resumeAudioContext();
-    console.log("Click: scheduling first wave timer");
     spawnTimer.start(() => portalsInstance.spawnEnemyPortals(audioControls));
     if (!animationFrameId) animate();
   },

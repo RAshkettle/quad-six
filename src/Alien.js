@@ -151,6 +151,9 @@ export class Alien {
     boomSound.volume = 0.05;
     boomSound.play();
 
+    // Create bright green acid explosion effect
+    this.createAcidExplosion();
+
     this.isDying = true;
 
     // Play death animation if available
@@ -177,6 +180,154 @@ export class Alien {
     setTimeout(() => {
       this.destroy();
     }, 1000);
+  }
+
+  createAcidExplosion() {
+    // Parameters for the acid explosion
+    const particleCount = 200;
+    const explosionSize = 2.5;
+    const duration = 1000; // milliseconds
+
+    // Create particle geometry
+    const particles = new THREE.BufferGeometry();
+
+    // Arrays to store particle attributes
+    const positions = new Float32Array(particleCount * 3);
+    const acidColors = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
+    const velocities = []; // Store velocities separately for animation
+
+    // Create random particle positions and velocities
+    for (let i = 0; i < particleCount; i++) {
+      // Initial positions (slightly randomized around alien center)
+      const x = (Math.random() - 0.5) * 0.5;
+      const y = (Math.random() - 0.5) * 0.2; // Start near ground level
+      const z = (Math.random() - 0.5) * 0.5;
+
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
+
+      // Bright acid green with slight variations
+      acidColors[i * 3] = 0.3 + Math.random() * 0.2; // R
+      acidColors[i * 3 + 1] = 0.8 + Math.random() * 0.2; // G
+      acidColors[i * 3 + 2] = 0.0; // B
+
+      // Random particle sizes
+      sizes[i] = 0.1 + Math.random() * 0.3;
+
+      // Store particle velocity vector for animation
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 3.0,
+        Math.random() * 5.0 + 2.0, // Stronger upward velocity for burst effect
+        (Math.random() - 0.5) * 3.0
+      );
+      velocities.push(velocity);
+    }
+
+    // Add attributes to the geometry
+    particles.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    particles.setAttribute(
+      "acidColor",
+      new THREE.BufferAttribute(acidColors, 3)
+    );
+    particles.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
+    // Create a shader material for the particles
+    const particleMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0.0 },
+        duration: { value: duration / 1000 },
+      },
+      vertexShader: `
+        attribute float size;
+        attribute vec3 acidColor;
+        varying vec3 vColor;
+        uniform float time;
+        uniform float duration;
+
+        void main() {
+          vColor = acidColor;
+
+          // Calculate fade based on time
+          float fade = 1.0 - (time / duration);
+
+          // Size increases then decreases
+          float dynamicSize = size * (1.0 + 2.0 * time) * fade;
+
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = dynamicSize * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+
+        void main() {
+          // Create circular particle
+          float distanceToCenter = length(gl_PointCoord - vec2(0.5));
+          if (distanceToCenter > 0.5) discard;
+
+          // Add glow effect
+          float glow = 0.5 * (1.0 - distanceToCenter * 2.0);
+          vec3 finalColor = vColor + vec3(0.2, 0.5, 0.0) * glow;
+
+          gl_FragColor = vec4(finalColor, 1.0 - distanceToCenter * 1.5);
+        }
+      `,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      transparent: true,
+      vertexColors: true,
+    });
+
+    // Create the particle system
+    const particleSystem = new THREE.Points(particles, particleMaterial);
+
+    // Position at the alien's current position
+    particleSystem.position.copy(this.position);
+    // Slightly above the ground
+    particleSystem.position.y = 0.0;
+
+    this.scene.add(particleSystem);
+
+    // Setup animation
+    const startTime = performance.now();
+    const posArray = particles.attributes.position.array;
+
+    // Animation function for the acid particles
+    const animateAcid = () => {
+      const elapsedTime = performance.now() - startTime;
+      const normalizedTime = elapsedTime / duration;
+
+      if (normalizedTime < 1.0) {
+        // Update particle positions based on velocities
+        for (let i = 0; i < particleCount; i++) {
+          // Apply gravity and update positions
+          velocities[i].y -= 0.1; // Gravity effect
+
+          posArray[i * 3] += velocities[i].x * 0.02;
+          posArray[i * 3 + 1] += velocities[i].y * 0.02;
+          posArray[i * 3 + 2] += velocities[i].z * 0.02;
+        }
+
+        // Update the shader time uniform
+        particleMaterial.uniforms.time.value = normalizedTime;
+
+        // Flag geometry for update
+        particles.attributes.position.needsUpdate = true;
+
+        requestAnimationFrame(animateAcid);
+      } else {
+        // Clean up when animation is complete
+        this.scene.remove(particleSystem);
+        particles.dispose();
+        particleMaterial.dispose();
+      }
+    };
+
+    // Start the animation
+    animateAcid();
   }
 
   destroy() {
