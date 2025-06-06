@@ -73,7 +73,9 @@ export class AlienManager {
   }
 
   notifyOfCreepDeath() {
-    if (this.getSwarmCount() === 0) {
+    // Remove dead aliens before checking count
+    this.aliens = this.aliens.filter((alien) => alien.isActive());
+    if (this.aliens.length === 0) {
       this.spawnTimer.start(this.spawnFunc);
     }
   }

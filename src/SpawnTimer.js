@@ -15,7 +15,6 @@ export class SpawnTimer {
    * @param {Function} callback - Function to invoke when timer finishes
    */
   start(callback) {
-    console.log("SPAWNTIMER STARTED");
     this.stop();
     this.timerId = setTimeout(() => {
       callback();

@@ -3,7 +3,6 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { AlienManager } from "./AlienManager.js"; // Import AlienManager class
 import { AppCamera } from "./AppCamera.js"; // Import AppCamera
 import { AudioControls } from "./AudioControls.js"; // Import AudioControls
-import { DebugControls } from "./DebugControls.js"; // Import DebugControls
 import { Lighting } from "./Lighting.js";
 import { Player } from "./Player.js"; // Import Player class
 import { Portals } from "./Portals.js"; // Import Portals class
@@ -353,14 +352,8 @@ const alienManager = new AlienManager(scene, player, ui, spawnTimer, () =>
   portalsInstance.spawnEnemyPortals(audioControls)
 );
 
-// Initialize Debug Controls
-const debugControls = new DebugControls(
-  portalsInstance,
-  audioControls,
-  camera,
-  player,
-  alienManager
-);
+// Debug controls disabled
+// const debugControls = new DebugControls(portalsInstance, audioControls, camera, player, alienManager);
 
 // Canvas
 const canvas = document.querySelector("#webgl");

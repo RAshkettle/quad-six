@@ -182,6 +182,8 @@ export class Alien {
   destroy() {
     if (this.model) {
       this.scene.remove(this.model);
+      // Clear model reference so isActive() returns false
+      this.model = null;
     }
     if (this.mixer) {
       this.mixer.stopAllAction();
